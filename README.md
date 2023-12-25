@@ -199,3 +199,40 @@ GANs have diverse applications across various fields and continue to evolve with
 
 Each type of GAN has distinct characteristics, architectures, or training methodologies tailored to specific challenges or improvements in generating data, whether it's images, text, or other content types. These variations enable GANs to be applied across diverse domains, pushing the boundaries of synthetic data generation and manipulation.
 
+
+## 5 Autoregressive Models
+
+**Definition:** Autoregressive models predict future values based on past observations, assuming a linear dependence on previous values.
+
+**Functionality:** They use observed sequences to predict the next value by considering past observations and potentially other factors.
+
+**Examples:** ARIMA, SARIMA, AR(p) models where 'p' denotes past observations for prediction.
+
+---
+
+## Recurrent Neural Networks (RNNs)
+
+**Definition:** RNNs process sequential data by maintaining a memory or state capturing information from past inputs.
+
+**Functionality:** They iterate through elements while updating a hidden state, capturing temporal dependencies in sequences.
+
+**Limitations:** Traditional RNNs may struggle with vanishing/exploding gradients, hindering learning of long-range dependencies.
+
+---
+
+## Long Short-Term Memory Networks (LSTMs)
+
+**Definition:** LSTMs are specialized RNNs designed to address vanishing/exploding gradient issues.
+
+**Functionality:** With complex architectures and gating mechanisms, LSTMs maintain memory cells to retain long-term information selectively.
+
+**Advantages:** Excel at capturing long-term dependencies, crucial for tasks involving sequences or time-series data.
+
+---
+
+### Comparison
+
+- **Autoregressive Models vs. RNNs:** AR models rely on linear dependencies, while RNNs capture nonlinear patterns.
+- **RNNs vs. LSTMs:** LSTMs address RNN limitations by better capturing long-term dependencies in sequences.
+
+These models are vital for time-series forecasting, natural language processing, and various other tasks involving sequential data, each addressing different challenges in sequence analysis.
