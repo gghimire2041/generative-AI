@@ -1,0 +1,1215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Statistics in AI & Machine Learning</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.11.0/math.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #8e44ad 0%, #3498db 100%);
+            color: white;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+            animation: fadeInDown 1s ease-out;
+        }
+
+        .title {
+            font-size: 3.5rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+            background: linear-gradient(45deg, #e74c3c, #f39c12, #2ecc71);
+            background-size: 200% 200%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: gradientShift 4s ease-in-out infinite;
+        }
+
+        .subtitle {
+            font-size: 1.3rem;
+            opacity: 0.9;
+            margin-bottom: 1rem;
+        }
+
+        .description {
+            font-size: 1.1rem;
+            opacity: 0.8;
+            max-width: 900px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .stats-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 2.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+            animation: fadeInUp 0.8s ease-out;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stats-card:hover {
+            transform: translateY(-10px);
+            background: rgba(255, 255, 255, 0.15);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .stats-icon {
+            font-size: 3.5rem;
+            margin-bottom: 1.5rem;
+            display: block;
+        }
+
+        .stats-title {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+            color: #ecf0f1;
+        }
+
+        .stats-desc {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            opacity: 0.9;
+            margin-bottom: 2rem;
+        }
+
+        .concept-list {
+            margin-bottom: 2rem;
+        }
+
+        .concept-item {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+            padding: 0.5rem 0;
+        }
+
+        .concept-icon {
+            margin-right: 1rem;
+            color: #f39c12;
+            font-size: 1.2rem;
+            margin-top: 0.2rem;
+        }
+
+        .concept-text {
+            font-size: 1rem;
+            opacity: 0.9;
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #e74c3c, #c0392b);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-right: 1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(45deg, #3498db, #2980b9);
+        }
+
+        .demo-section {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 2.5rem;
+            margin: 3rem 0;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .demo-title {
+            font-size: 1.8rem;
+            margin-bottom: 1.5rem;
+            color: #f39c12;
+            text-align: center;
+        }
+
+        .chart-container {
+            width: 100%;
+            height: 450px;
+            margin: 2rem 0;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 1.5rem;
+        }
+
+        .formula-box {
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 15px;
+            padding: 2rem;
+            margin: 1.5rem 0;
+            font-family: 'Courier New', monospace;
+            font-size: 1.1rem;
+            overflow-x: auto;
+            border-left: 4px solid #e74c3c;
+            text-align: center;
+        }
+
+        .interactive-section {
+            background: linear-gradient(135deg, rgba(231, 76, 60, 0.2), rgba(192, 57, 43, 0.2));
+            border-radius: 20px;
+            padding: 3rem;
+            margin: 3rem 0;
+            border: 1px solid rgba(231, 76, 60, 0.3);
+        }
+
+        .interactive-title {
+            font-size: 2.5rem;
+            text-align: center;
+            margin-bottom: 2rem;
+            color: #f39c12;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 1rem;
+            border-radius: 10px;
+        }
+
+        .control-label {
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+        }
+
+        .slider {
+            width: 150px;
+            margin: 0.5rem 0;
+        }
+
+        .output-value {
+            color: #f39c12;
+            font-weight: bold;
+            margin-top: 0.5rem;
+        }
+
+        .navigation {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+
+        .nav-btn {
+            background: rgba(52, 152, 219, 0.9);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 15px;
+            margin: 0.2rem;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        .nav-btn:hover {
+            background: rgba(52, 152, 219, 1);
+            transform: scale(1.05);
+        }
+
+        .ml-connection {
+            background: rgba(46, 204, 113, 0.1);
+            border-left: 4px solid #2ecc71;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            border-radius: 0 10px 10px 0;
+        }
+
+        .ml-connection h4 {
+            color: #2ecc71;
+            margin-bottom: 0.5rem;
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes gradientShift {
+            0%, 100% {
+                background-position: 0% 50%;
+            }
+            50% {
+                background-position: 100% 50%;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .title {
+                font-size: 2.5rem;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .chart-container {
+                height: 350px;
+            }
+
+            .controls {
+                flex-direction: column;
+                align-items: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="navigation">
+        <button class="nav-btn" onclick="window.location.href='index.html'">🏠 Home</button>
+        <button class="nav-btn" onclick="scrollToSection('descriptive')">📊 Descriptive</button>
+        <button class="nav-btn" onclick="scrollToSection('inferential')">🔍 Inferential</button>
+        <button class="nav-btn" onclick="scrollToSection('predictive')">🔮 Predictive</button>
+        <button class="nav-btn" onclick="scrollToSection('interactive')">⚡ Interactive</button>
+    </div>
+
+    <div class="container">
+        <div class="header">
+            <h1 class="title">📊 Statistics in AI & Machine Learning</h1>
+            <p class="subtitle">The Mathematical Foundation of Intelligent Systems</p>
+            <p class="description">
+                Statistics provides the essential mathematical framework that powers modern AI and machine learning. 
+                From data exploration to model validation, statistical principles guide every aspect of intelligent 
+                system development. Explore how descriptive, inferential, and predictive analytics work together 
+                to transform raw data into actionable insights and reliable predictions.
+            </p>
+        </div>
+
+        <section id="descriptive">
+            <div class="stats-grid">
+                <div class="stats-card">
+                    <span class="stats-icon">📈</span>
+                    <h3 class="stats-title">Descriptive Statistics</h3>
+                    <p class="stats-desc">
+                        Summarize and describe the main characteristics of datasets through measures of central tendency, 
+                        variability, and distribution shapes. The foundation for all statistical analysis.
+                    </p>
+                    <div class="concept-list">
+                        <div class="concept-item">
+                            <span class="concept-icon">📐</span>
+                            <span class="concept-text"><strong>Central Tendency:</strong> Mean, median, mode - where your data centers</span>
+                        </div>
+                        <div class="concept-item">
+                            <span class="concept-icon">📏</span>
+                            <span class="concept-text"><strong>Variability:</strong> Standard deviation, variance, range - data spread</span>
+                        </div>
+                        <div class="concept-item">
+                            <span class="concept-icon">📊</span>
+                            <span class="concept-text"><strong>Distribution:</strong> Skewness, kurtosis, histograms - data shape</span>
+                        </div>
+                        <div class="concept-item">
+                            <span class="concept-icon">🔗</span>
+                            <span class="concept-text"><strong>Correlation:</strong> Pearson, Spearman - variable relationships</span>
+                        </div>
+                    </div>
+                    <div class="ml-connection">
+                        <h4>🤖 ML Applications:</h4>
+                        <p>Feature engineering, data preprocessing, exploratory data analysis, outlier detection, feature selection</p>
+                    </div>
+                    <button class="btn" onclick="demoDescriptive()">📊 Explore</button>
+                    <button class="btn btn-secondary" onclick="showStatsCode('descriptive')">💻 Code</button>
+                </div>
+
+                <div class="stats-card">
+                    <span class="stats-icon">🔍</span>
+                    <h3 class="stats-title">Inferential Statistics</h3>
+                    <p class="stats-desc">
+                        Draw conclusions about populations from sample data using probability theory, hypothesis testing, 
+                        and confidence intervals. Make data-driven decisions with quantified uncertainty.
+                    </p>
+                    <div class="concept-list">
+                        <div class="concept-item">
+                            <span class="concept-icon">🎯</span>
+                            <span class="concept-text"><strong>Hypothesis Testing:</strong> t-tests, ANOVA, chi-square tests</span>
+                        </div>
+                        <div class="concept-item">
+                            <span class="concept-icon">📊</span>
+                            <span class="concept-text"><strong>Confidence Intervals:</strong> Parameter estimation with uncertainty</span>
+                        </div>
+                        <div class="concept-item">
+                            <span class="concept-icon">🎲</span>
+                            <span class="concept-text"><strong>Probability Distributions:</strong> Normal, binomial, Poisson</span>
+                        </div>
+                        <div class="concept-item">
+                            <span class="concept-icon">⚖️</span>
+                            <span class="concept-text"><strong>Statistical Significance:</strong> p-values, Type I/II errors</span>
+                        </div>
+                    </div>
+                    <div class="ml-connection">
+                        <h4>🤖 ML Applications:</h4>
+                        <p>Model validation, A/B testing, feature significance testing, cross-validation, statistical model assumptions</p>
+                    </div>
+                    <button class="btn" onclick="demoInferential()">🔍 Analyze</button>
+                    <button class="btn btn-secondary" onclick="showStatsCode('inferential')">💻 Code</button>
+                </div>
+            </div>
+        </section>
+
+        <section id="predictive">
+            <div class="stats-grid">
+                <div class="stats-card">
+                    <span class="stats-icon">🔮</span>
+                    <h3 class="stats-title">Predictive Analytics</h3>
+                    <p class="stats-desc">
+                        Use statistical models and machine learning algorithms to forecast future outcomes based on 
+                        historical data patterns. Transform insights into actionable predictions.
+                    </p>
+                    <div class="concept-list">
+                        <div class="concept-item">
+                            <span class="concept-icon">📈</span>
+                            <span class="concept-text"><strong>Regression Analysis:</strong> Linear, polynomial, logistic regression</span>
+                        </div>
+                        <div class="concept-item">
+                            <span class="concept-icon">⏱️</span>
+                            <span class="concept-text"><strong>Time Series:</strong> ARIMA, seasonal decomposition, forecasting</span>
+                        </div>
+                        <div class="concept-item">
+                            <span class="concept-icon">🎯</span>
+                            <span class="concept-text"><strong>Classification:</strong> Decision boundaries, ROC curves, confusion matrices</span>
+                        </div>
+                        <div class="concept-item">
+                            <span class="concept-icon">🔄</span>
+                            <span class="concept-text"><strong>Model Selection:</strong> Cross-validation, information criteria</span>
+                        </div>
+                    </div>
+                    <div class="ml-connection">
+                        <h4>🤖 ML Applications:</h4>
+                        <p>Supervised learning, time series forecasting, recommendation systems, risk assessment, demand prediction</p>
+                    </div>
+                    <button class="btn" onclick="demoPredictive()">🔮 Predict</button>
+                    <button class="btn btn-secondary" onclick="showStatsCode('predictive')">💻 Code</button>
+                </div>
+
+                <div class="stats-card">
+                    <span class="stats-icon">🎲</span>
+                    <h3 class="stats-title">Probability Theory</h3>
+                    <p class="stats-desc">
+                        Mathematical foundation for handling uncertainty in data and models. Essential for understanding 
+                        machine learning algorithms and making probabilistic predictions.
+                    </p>
+                    <div class="concept-list">
+                        <div class="concept-item">
+                            <span class="concept-icon">🎯</span>
+                            <span class="concept-text"><strong>Bayes' Theorem:</strong> Prior, likelihood, posterior probability</span>
+                        </div>
+                        <div class="concept-item">
+                            <span class="concept-icon">📊</span>
+                            <span class="concept-text"><strong>Random Variables:</strong> Discrete, continuous, joint distributions</span>
+                        </div>
+                        <div class="concept-item">
+                            <span class="concept-icon">🔗</span>
+                            <span class="concept-text"><strong>Independence:</strong> Conditional probability, Markov properties</span>
+                        </div>
+                        <div class="concept-item">
+                            <span class="concept-icon">📈</span>
+                            <span class="concept-text"><strong>Limit Theorems:</strong> Central limit theorem, law of large numbers</span>
+                        </div>
+                    </div>
+                    <div class="ml-connection">
+                        <h4>🤖 ML Applications:</h4>
+                        <p>Naive Bayes, Bayesian networks, probabilistic graphical models, uncertainty quantification, generative models</p>
+                    </div>
+                    <button class="btn" onclick="demoProbability()">🎲 Calculate</button>
+                    <button class="btn btn-secondary" onclick="showStatsCode('probability')">💻 Code</button>
+                </div>
+            </div>
+        </section>
+
+        <section id="interactive" class="interactive-section">
+            <h2 class="interactive-title">⚡ Interactive Statistical Demonstrations</h2>
+            <p style="text-align: center; font-size: 1.2rem; margin-bottom: 2rem; opacity: 0.9;">
+                Explore statistical concepts with real-time visualizations and calculations
+            </p>
+            
+            <div class="controls">
+                <div class="control-group">
+                    <label class="control-label">Sample Size</label>
+                    <input type="range" class="slider" id="sampleSize" min="10" max="1000" value="100" oninput="updateDemo()">
+                    <div class="output-value" id="sampleSizeValue">100</div>
+                </div>
+                <div class="control-group">
+                    <label class="control-label">Mean</label>
+                    <input type="range" class="slider" id="mean" min="-10" max="10" value="0" step="0.1" oninput="updateDemo()">
+                    <div class="output-value" id="meanValue">0</div>
+                </div>
+                <div class="control-group">
+                    <label class="control-label">Standard Deviation</label>
+                    <input type="range" class="slider" id="std" min="0.1" max="5" value="1" step="0.1" oninput="updateDemo()">
+                    <div class="output-value" id="stdValue">1</div>
+                </div>
+                <div class="control-group">
+                    <label class="control-label">Confidence Level</label>
+                    <input type="range" class="slider" id="confidence" min="80" max="99" value="95" oninput="updateDemo()">
+                    <div class="output-value" id="confidenceValue">95%</div>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <canvas id="interactiveChart"></canvas>
+            </div>
+
+            <div class="formula-box" id="formulaBox">
+                <div>Sample Mean: x̄ = Σxᵢ/n</div>
+                <div>Sample Standard Deviation: s = √(Σ(xᵢ-x̄)²/(n-1))</div>
+                <div>Confidence Interval: x̄ ± (t_{α/2} × s/√n)</div>
+            </div>
+        </section>
+
+        <div class="demo-section" id="demo-area">
+            <h3 class="demo-title">📊 Statistical Analysis Dashboard</h3>
+            <p style="text-align: center; margin-bottom: 2rem;">Click on any statistical concept above to see detailed analysis and visualizations!</p>
+            <div class="chart-container">
+                <canvas id="statsChart"></canvas>
+            </div>
+            <div id="stats-details"></div>
+        </div>
+    </div>
+
+    <script>
+        let currentChart = null;
+        let interactiveChart = null;
+
+        function scrollToSection(sectionId) {
+            document.getElementById(sectionId).scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function generateRandomData(n, mean = 0, std = 1) {
+            const data = [];
+            for (let i = 0; i < n; i++) {
+                // Box-Muller transform for normal distribution
+                const u1 = Math.random();
+                const u2 = Math.random();
+                const z = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+                data.push(mean + std * z);
+            }
+            return data;
+        }
+
+        function calculateStats(data) {
+            const n = data.length;
+            const mean = data.reduce((sum, x) => sum + x, 0) / n;
+            const variance = data.reduce((sum, x) => sum + Math.pow(x - mean, 2), 0) / (n - 1);
+            const std = Math.sqrt(variance);
+            const sortedData = [...data].sort((a, b) => a - b);
+            const median = n % 2 === 0 ? 
+                (sortedData[n/2 - 1] + sortedData[n/2]) / 2 : 
+                sortedData[Math.floor(n/2)];
+            
+            return { mean, std, variance, median, min: Math.min(...data), max: Math.max(...data) };
+        }
+
+        function demoDescriptive() {
+            const data = generateRandomData(200, 50, 15);
+            const stats = calculateStats(data);
+            
+            const ctx = document.getElementById('statsChart').getContext('2d');
+            
+            if (currentChart) currentChart.destroy();
+            
+            // Create histogram data
+            const bins = 20;
+            const min = Math.min(...data);
+            const max = Math.max(...data);
+            const binWidth = (max - min) / bins;
+            const histogram = new Array(bins).fill(0);
+            const binLabels = [];
+            
+            for (let i = 0; i < bins; i++) {
+                binLabels.push(`${(min + i * binWidth).toFixed(1)}`);
+            }
+            
+            data.forEach(value => {
+                const binIndex = Math.min(Math.floor((value - min) / binWidth), bins - 1);
+                histogram[binIndex]++;
+            });
+
+            currentChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: binLabels,
+                    datasets: [{
+                        label: 'Frequency',
+                        data: histogram,
+                        backgroundColor: 'rgba(52, 152, 219, 0.7)',
+                        borderColor: 'rgba(52, 152, 219, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: { display: true, text: 'Data Distribution Histogram', color: 'white', font: { size: 16 } },
+                        legend: { labels: { color: 'white' } }
+                    },
+                    scales: {
+                        x: { title: { display: true, text: 'Value', color: 'white' }, ticks: { color: 'white' }, grid: { color: 'rgba(255,255,255,0.1)' } },
+                        y: { title: { display: true, text: 'Frequency', color: 'white' }, ticks: { color: 'white' }, grid: { color: 'rgba(255,255,255,0.1)' } }
+                    }
+                }
+            });
+
+            document.getElementById('stats-details').innerHTML = `
+                <div class="formula-box">
+                    <h4>📊 Descriptive Statistics Summary</h4>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 1rem;">
+                        <div><strong>Mean:</strong> ${stats.mean.toFixed(2)}</div>
+                        <div><strong>Median:</strong> ${stats.median.toFixed(2)}</div>
+                        <div><strong>Std Dev:</strong> ${stats.std.toFixed(2)}</div>
+                        <div><strong>Variance:</strong> ${stats.variance.toFixed(2)}</div>
+                        <div><strong>Min:</strong> ${stats.min.toFixed(2)}</div>
+                        <div><strong>Max:</strong> ${stats.max.toFixed(2)}</div>
+                    </div>
+                    <div style="margin-top: 1rem;">
+                        <strong>Interpretation:</strong> This histogram shows the distribution of ${data.length} data points. 
+                        The mean (${stats.mean.toFixed(2)}) represents the center, while the standard deviation (${stats.std.toFixed(2)}) 
+                        indicates how spread out the data is around the mean.
+                    </div>
+                </div>
+            `;
+        }
+
+        function demoInferential() {
+            const sample1 = generateRandomData(50, 100, 15);
+            const sample2 = generateRandomData(60, 108, 18);
+            
+            const stats1 = calculateStats(sample1);
+            const stats2 = calculateStats(sample2);
+            
+            // Calculate t-test
+            const pooledStd = Math.sqrt(((sample1.length - 1) * stats1.variance + (sample2.length - 1) * stats2.variance) / (sample1.length + sample2.length - 2));
+            const tStat = (stats1.mean - stats2.mean) / (pooledStd * Math.sqrt(1/sample1.length + 1/sample2.length));
+            const df = sample1.length + sample2.length - 2;
+            
+            const ctx = document.getElementById('statsChart').getContext('2d');
+            
+            if (currentChart) currentChart.destroy();
+
+            currentChart = new Chart(ctx, {
+                type: 'scatter',
+                data: {
+                    datasets: [
+                        {
+                            label: 'Sample 1',
+                            data: sample1.map((value, index) => ({x: index, y: value})),
+                            backgroundColor: 'rgba(231, 76, 60, 0.7)',
+                            borderColor: 'rgba(231, 76, 60, 1)',
+                            pointRadius: 4
+                        },
+                        {
+                            label: 'Sample 2',
+                            data: sample2.map((value, index) => ({x: index, y: value})),
+                            backgroundColor: 'rgba(46, 204, 113, 0.7)',
+                            borderColor: 'rgba(46, 204, 113, 1)',
+                            pointRadius: 4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: { display: true, text: 'Two Sample Comparison', color: 'white', font: { size: 16 } },
+                        legend: { labels: { color: 'white' } }
+                    },
+                    scales: {
+                        x: { title: { display: true, text: 'Observation', color: 'white' }, ticks: { color: 'white' }, grid: { color: 'rgba(255,255,255,0.1)' } },
+                        y: { title: { display: true, text: 'Value', color: 'white' }, ticks: { color: 'white' }, grid: { color: 'rgba(255,255,255,0.1)' } }
+                    }
+                }
+            });
+
+            const pValue = tStat > 2 ? "< 0.05" : "> 0.05";
+            const significant = tStat > 2 ? "statistically significant" : "not statistically significant";
+
+            document.getElementById('stats-details').innerHTML = `
+                <div class="formula-box">
+                    <h4>🔍 Two-Sample t-Test Results</h4>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin-top: 1rem;">
+                        <div><strong>Sample 1 Mean:</strong> ${stats1.mean.toFixed(2)} ± ${stats1.std.toFixed(2)}</div>
+                        <div><strong>Sample 2 Mean:</strong> ${stats2.mean.toFixed(2)} ± ${stats2.std.toFixed(2)}</div>
+                        <div><strong>t-statistic:</strong> ${tStat.toFixed(3)}</div>
+                        <div><strong>Degrees of freedom:</strong> ${df}</div>
+                        <div><strong>p-value:</strong> ${pValue}</div>
+                        <div><strong>Result:</strong> ${significant}</div>
+                    </div>
+                    <div style="margin-top: 1rem;">
+                        <strong>Formula:</strong> t = (x̄₁ - x̄₂) / (s_pooled × √(1/n₁ + 1/n₂))<br>
+                        <strong>Interpretation:</strong> We're testing if the two samples come from populations with different means. 
+                        The result is ${significant} at α = 0.05 level.
+                    </div>
+                </div>
+            `;
+        }
+
+        function demoPredictive() {
+            // Generate linear relationship with noise
+            const n = 100;
+            const x = Array.from({length: n}, (_, i) => i / 10);
+            const y = x.map(xi => 2 * xi + 5 + (Math.random() - 0.5) * 4);
+            
+            // Calculate linear regression
+            const xMean = x.reduce((sum, xi) => sum + xi, 0) / n;
+            const yMean = y.reduce((sum, yi) => sum + yi, 0) / n;
+            
+            const numerator = x.reduce((sum, xi, i) => sum + (xi - xMean) * (y[i] - yMean), 0);
+            const denominator = x.reduce((sum, xi) => sum + Math.pow(xi - xMean, 2), 0);
+            
+            const slope = numerator / denominator;
+            const intercept = yMean - slope * xMean;
+            
+            // Calculate R-squared
+            const yPred = x.map(xi => slope * xi + intercept);
+            const ssRes = y.reduce((sum, yi, i) => sum + Math.pow(yi - yPred[i], 2), 0);
+            const ssTot = y.reduce((sum, yi) => sum + Math.pow(yi - yMean, 2), 0);
+            const rSquared = 1 - (ssRes / ssTot);
+            
+            const ctx = document.getElementById('statsChart').getContext('2d');
+            
+            if (currentChart) currentChart.destroy();
+
+            currentChart = new Chart(ctx, {
+                type: 'scatter',
+                data: {
+                    datasets: [
+                        {
+                            label: 'Data Points',
+                            data: x.map((xi, i) => ({x: xi, y: y[i]})),
+                            backgroundColor: 'rgba(155, 89, 182, 0.7)',
+                            borderColor: 'rgba(155, 89, 182, 1)',
+                            pointRadius: 5
+                        },
+                        {
+                            label: 'Regression Line',
+                            data: x.map(xi => ({x: xi, y: slope * xi + intercept})),
+                            backgroundColor: 'rgba(231, 76, 60, 0)',
+                            borderColor: 'rgba(231, 76, 60, 1)',
+                            pointRadius: 0,
+                            showLine: true,
+                            borderWidth: 3
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: { display: true, text: 'Linear Regression Analysis', color: 'white', font: { size: 16 } },
+                        legend: { labels: { color: 'white' } }
+                    },
+                    scales: {
+                        x: { title: { display: true, text: 'X Variable', color: 'white' }, ticks: { color: 'white' }, grid: { color: 'rgba(255,255,255,0.1)' } },
+                        y: { title: { display: true, text: 'Y Variable', color: 'white' }, ticks: { color: 'white' }, grid: { color: 'rgba(255,255,255,0.1)' } }
+                    }
+                }
+            });
+
+            document.getElementById('stats-details').innerHTML = `
+                <div class="formula-box">
+                    <h4>🔮 Linear Regression Results</h4>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 1rem;">
+                        <div><strong>Slope (β₁):</strong> ${slope.toFixed(3)}</div>
+                        <div><strong>Intercept (β₀):</strong> ${intercept.toFixed(3)}</div>
+                        <div><strong>R-squared:</strong> ${rSquared.toFixed(3)}</div>
+                        <div><strong>Correlation:</strong> ${Math.sqrt(rSquared).toFixed(3)}</div>
+                    </div>
+                    <div style="margin-top: 1rem;">
+                        <strong>Equation:</strong> ŷ = ${slope.toFixed(3)}x + ${intercept.toFixed(3)}<br>
+                        <strong>Interpretation:</strong> The model explains ${(rSquared * 100).toFixed(1)}% of the variance in Y. 
+                        For each unit increase in X, Y increases by ${slope.toFixed(3)} units on average.
+                    </div>
+                </div>
+            `;
+        }
+
+        function demoProbability() {
+            // Demonstrate Bayesian updating
+            const priorProb = 0.3; // Prior probability of event
+            const likelihoods = [0.8, 0.6, 0.9, 0.7, 0.85]; // Likelihood of evidence given event
+            const evidenceProb = 0.5; // Probability of evidence
+            
+            let currentProb = priorProb;
+            const bayesianUpdates = [currentProb];
+            
+            likelihoods.forEach(likelihood => {
+                currentProb = (likelihood * currentProb) / ((likelihood * currentProb) + ((1 - likelihood) * (1 - currentProb)));
+                bayesianUpdates.push(currentProb);
+            });
+            
+            const ctx = document.getElementById('statsChart').getContext('2d');
+            
+            if (currentChart) currentChart.destroy();
+
+            currentChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Prior', 'Update 1', 'Update 2', 'Update 3', 'Update 4', 'Update 5'],
+                    datasets: [{
+                        label: 'Posterior Probability',
+                        data: bayesianUpdates,
+                        borderColor: 'rgba(243, 156, 18, 1)',
+                        backgroundColor: 'rgba(243, 156, 18, 0.2)',
+                        tension: 0.4,
+                        pointRadius: 8,
+                        borderWidth: 3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: { display: true, text: 'Bayesian Probability Updating', color: 'white', font: { size: 16 } },
+                        legend: { labels: { color: 'white' } }
+                    },
+                    scales: {
+                        x: { title: { display: true, text: 'Evidence Updates', color: 'white' }, ticks: { color: 'white' }, grid: { color: 'rgba(255,255,255,0.1)' } },
+                        y: { title: { display: true, text: 'Probability', color: 'white' }, ticks: { color: 'white' }, grid: { color: 'rgba(255,255,255,0.1)' }, min: 0, max: 1 }
+                    }
+                }
+            });
+
+            document.getElementById('stats-details').innerHTML = `
+                <div class="formula-box">
+                    <h4>🎲 Bayesian Probability Update</h4>
+                    <div style="margin-top: 1rem;">
+                        <strong>Bayes' Theorem:</strong> P(H|E) = P(E|H) × P(H) / P(E)<br>
+                        <strong>Starting Prior:</strong> ${priorProb.toFixed(3)}<br>
+                        <strong>Final Posterior:</strong> ${bayesianUpdates[bayesianUpdates.length - 1].toFixed(3)}
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-top: 1rem;">
+                        ${bayesianUpdates.slice(1).map((prob, i) => `<div><strong>Update ${i+1}:</strong> ${prob.toFixed(3)}</div>`).join('')}
+                    </div>
+                    <div style="margin-top: 1rem;">
+                        <strong>Interpretation:</strong> Each piece of evidence updates our belief about the hypothesis. 
+                        The posterior probability converges as we gather more evidence.
+                    </div>
+                </div>
+            `;
+        }
+
+        function updateDemo() {
+            const sampleSize = parseInt(document.getElementById('sampleSize').value);
+            const mean = parseFloat(document.getElementById('mean').value);
+            const std = parseFloat(document.getElementById('std').value);
+            const confidence = parseInt(document.getElementById('confidence').value);
+            
+            document.getElementById('sampleSizeValue').textContent = sampleSize;
+            document.getElementById('meanValue').textContent = mean;
+            document.getElementById('stdValue').textContent = std;
+            document.getElementById('confidenceValue').textContent = confidence + '%';
+            
+            const data = generateRandomData(sampleSize, mean, std);
+            const stats = calculateStats(data);
+            
+            // Calculate confidence interval
+            const alpha = (100 - confidence) / 100;
+            const tValue = 1.96; // Approximation for large samples
+            const marginError = tValue * stats.std / Math.sqrt(sampleSize);
+            const ciLower = stats.mean - marginError;
+            const ciUpper = stats.mean + marginError;
+            
+            const ctx = document.getElementById('interactiveChart').getContext('2d');
+            
+            if (interactiveChart) interactiveChart.destroy();
+            
+            // Create histogram
+            const bins = Math.min(20, Math.floor(sampleSize / 5));
+            const min = Math.min(...data);
+            const max = Math.max(...data);
+            const binWidth = (max - min) / bins;
+            const histogram = new Array(bins).fill(0);
+            const binLabels = [];
+            
+            for (let i = 0; i < bins; i++) {
+                binLabels.push(`${(min + i * binWidth).toFixed(1)}`);
+            }
+            
+            data.forEach(value => {
+                const binIndex = Math.min(Math.floor((value - min) / binWidth), bins - 1);
+                histogram[binIndex]++;
+            });
+
+            interactiveChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: binLabels,
+                    datasets: [{
+                        label: 'Frequency',
+                        data: histogram,
+                        backgroundColor: 'rgba(52, 152, 219, 0.7)',
+                        borderColor: 'rgba(52, 152, 219, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: { 
+                            display: true, 
+                            text: `Sample Distribution (n=${sampleSize}, μ=${stats.mean.toFixed(2)}, σ=${stats.std.toFixed(2)})`, 
+                            color: 'white', 
+                            font: { size: 14 } 
+                        },
+                        legend: { labels: { color: 'white' } }
+                    },
+                    scales: {
+                        x: { ticks: { color: 'white' }, grid: { color: 'rgba(255,255,255,0.1)' } },
+                        y: { ticks: { color: 'white' }, grid: { color: 'rgba(255,255,255,0.1)' } }
+                    }
+                }
+            });
+            
+            document.getElementById('formulaBox').innerHTML = `
+                <div>Sample Mean: x̄ = ${stats.mean.toFixed(3)}</div>
+                <div>Sample Standard Deviation: s = ${stats.std.toFixed(3)}</div>
+                <div>${confidence}% Confidence Interval: [${ciLower.toFixed(3)}, ${ciUpper.toFixed(3)}]</div>
+                <div>Margin of Error: ±${marginError.toFixed(3)}</div>
+            `;
+        }
+
+        function showStatsCode(type) {
+            const codeExamples = {
+                descriptive: `
+# Descriptive Statistics in Python
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Load and explore data
+df = pd.read_csv('data.csv')
+
+# Basic descriptive statistics
+print(df.describe())
+print(f"Shape: {df.shape}")
+print(f"Data types:\\n{df.dtypes}")
+
+# Central tendency
+mean_val = df['column'].mean()
+median_val = df['column'].median()
+mode_val = df['column'].mode()[0]
+
+# Variability measures
+std_val = df['column'].std()
+var_val = df['column'].var()
+range_val = df['column'].max() - df['column'].min()
+iqr_val = df['column'].quantile(0.75) - df['column'].quantile(0.25)
+
+# Distribution shape
+skewness = df['column'].skew()
+kurtosis = df['column'].kurtosis()
+
+# Correlation analysis
+correlation_matrix = df.corr()
+sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm')
+
+# Visualization
+plt.figure(figsize=(12, 4))
+plt.subplot(1, 3, 1)
+plt.hist(df['column'], bins=30, alpha=0.7)
+plt.title('Histogram')
+
+plt.subplot(1, 3, 2)
+plt.boxplot(df['column'])
+plt.title('Box Plot')
+
+plt.subplot(1, 3, 3)
+plt.scatter(df['x'], df['y'])
+plt.title('Scatter Plot')
+plt.tight_layout()
+plt.show()`,
+
+                inferential: `
+# Inferential Statistics in Python
+import scipy.stats as stats
+from scipy.stats import ttest_ind, chi2_contingency, f_oneway
+import numpy as np
+
+# One-sample t-test
+sample = np.array([23, 25, 28, 30, 32, 29, 27, 26])
+population_mean = 25
+t_stat, p_value = stats.ttest_1samp(sample, population_mean)
+print(f"One-sample t-test: t={t_stat:.3f}, p={p_value:.3f}")
+
+# Two-sample t-test
+group1 = np.random.normal(100, 15, 50)
+group2 = np.random.normal(105, 15, 50)
+t_stat, p_value = ttest_ind(group1, group2)
+print(f"Two-sample t-test: t={t_stat:.3f}, p={p_value:.3f}")
+
+# Confidence interval for mean
+confidence_level = 0.95
+degrees_freedom = len(sample) - 1
+sample_mean = np.mean(sample)
+sample_std = np.std(sample, ddof=1)
+standard_error = sample_std / np.sqrt(len(sample))
+
+t_critical = stats.t.ppf((1 + confidence_level) / 2, degrees_freedom)
+margin_error = t_critical * standard_error
+ci_lower = sample_mean - margin_error
+ci_upper = sample_mean + margin_error
+
+print(f"95% CI: [{ci_lower:.2f}, {ci_upper:.2f}]")
+
+# ANOVA test
+group1 = np.random.normal(100, 15, 30)
+group2 = np.random.normal(105, 15, 30)
+group3 = np.random.normal(110, 15, 30)
+f_stat, p_value = f_oneway(group1, group2, group3)
+print(f"ANOVA: F={f_stat:.3f}, p={p_value:.3f}")
+
+# Chi-square test
+observed = np.array([[10, 20, 30], [15, 25, 35]])
+chi2_stat, p_value, dof, expected = chi2_contingency(observed)
+print(f"Chi-square: χ²={chi2_stat:.3f}, p={p_value:.3f}")`,
+
+                predictive: `
+# Predictive Analytics in Python
+import numpy as np
+import pandas as pd
+from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.linear_model import LinearRegression, LogisticRegression
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import mean_squared_error, r2_score, classification_report
+from sklearn.preprocessing import StandardScaler
+import matplotlib.pyplot as plt
+
+# Linear Regression for continuous prediction
+X = df[['feature1', 'feature2', 'feature3']]
+y = df['target']
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Train model
+lr_model = LinearRegression()
+lr_model.fit(X_train, y_train)
+
+# Make predictions
+y_pred = lr_model.predict(X_test)
+
+# Evaluate model
+mse = mean_squared_error(y_test, y_pred)
+r2 = r2_score(y_test, y_pred)
+print(f"MSE: {mse:.3f}, R²: {r2:.3f}")
+
+# Cross-validation
+cv_scores = cross_val_score(lr_model, X, y, cv=5, scoring='r2')
+print(f"CV R² scores: {cv_scores}")
+print(f"Mean CV R²: {cv_scores.mean():.3f} ± {cv_scores.std():.3f}")
+
+# Time Series Forecasting
+from statsmodels.tsa.arima.model import ARIMA
+from statsmodels.tsa.seasonal import seasonal_decompose
+
+# Prepare time series data
+ts_data = pd.Series(data, index=pd.date_range('2020-01-01', periods=len(data), freq='D'))
+
+# Decompose time series
+decomposition = seasonal_decompose(ts_data, model='additive', period=365)
+decomposition.plot()
+
+# Fit ARIMA model
+model = ARIMA(ts_data, order=(1, 1, 1))
+fitted_model = model.fit()
+forecast = fitted_model.forecast(steps=30)
+
+# Classification example
+from sklearn.metrics import accuracy_score, classification_report, roc_auc_score
+
+# Logistic regression for binary classification
+clf = LogisticRegression(random_state=42)
+clf.fit(X_train, y_train_binary)
+y_pred_proba = clf.predict_proba(X_test)[:, 1]
+y_pred_binary = clf.predict(X_test)
+
+# Evaluate classification
+accuracy = accuracy_score(y_test_binary, y_pred_binary)
+auc_score = roc_auc_score(y_test_binary, y_pred_proba)
+print(f"Accuracy: {accuracy:.3f}")
+print(f"AUC: {auc_score:.3f}")
+print(classification_report(y_test_binary, y_pred_binary))`,
+
+                probability: `
+# Probability Theory in Python
+import numpy as np
+import scipy.stats as stats
+import matplotlib.pyplot as plt
+
+# Probability Distributions
+# Normal Distribution
+mu, sigma = 0, 1
+x = np.linspace(-4, 4, 100)
+normal_pdf = stats.norm.pdf(x, mu, sigma)
+normal_cdf = stats.norm.cdf(x, mu, sigma)
+
+plt.figure(figsize=(12, 4))
+plt.subplot(1, 2, 1)
+plt.plot(x, normal_pdf, label='PDF')
+plt.title('Normal Distribution PDF')
+plt.subplot(1, 2, 2)
+plt.plot(x, normal_cdf, label='CDF')
+plt.title('Normal Distribution CDF')
+plt.show()
+
+# Bayes' Theorem Implementation
+def bayes_theorem(prior, likelihood, evidence):
+    """Calculate posterior probability using Bayes' theorem"""
+    posterior = (likelihood * prior) / evidence
+    return posterior
+
+# Example: Medical diagnosis
+prior_disease = 0.01  # 1% of population has disease
+test_sensitivity = 0.95  # P(positive test | disease)
+test_specificity = 0.90  # P(negative test | no disease)
+
+# Calculate P(positive test)
+p_positive = (test_sensitivity * prior_disease) + 
+             ((1 - test_specificity) * (1 - prior_disease))
+
+# Calculate P(disease | positive test)
+posterior = bayes_theorem(prior_disease, test_sensitivity, p_positive)
+print(f"P(disease | positive test) = {posterior:.4f}")
+
+# Monte Carlo Simulation
+def monte_carlo_pi(n_samples):
+    """Estimate π using Monte Carlo method"""
+    points_inside_circle = 0
+    
+    for _ in range(n_samples):
+        x, y = np.random.random(2)
+        if x**2 + y**2 <= 1:
+            points_inside_circle += 1
+    
+    pi_estimate = 4 * points_inside_circle / n_samples
+    return pi_estimate
+
+pi_est = monte_carlo_pi(100000)
+print(f"π estimate: {pi_est:.4f}")
+
+# Central Limit Theorem Demonstration
+def demonstrate_clt(n_samples, sample_size):
+    """Demonstrate Central Limit Theorem"""
+    sample_means = []
+    
+    for _ in range(n_samples):
+        # Sample from uniform distribution
+        sample = np.random.uniform(0, 1, sample_size)
+        sample_means.append(np.mean(sample))
+    
+    return np.array(sample_means)
+
+sample_means = demonstrate_clt(1000, 30)
+plt.hist(sample_means, bins=50, density=True, alpha=0.7)
+plt.title('Distribution of Sample Means (CLT)')
+plt.xlabel('Sample Mean')
+plt.ylabel('Density')
+plt.show()
+
+# Hypothesis Testing Framework
+def hypothesis_test(sample, null_hypothesis, alpha=0.05):
+    """Generic hypothesis testing framework"""
+    # Calculate test statistic
+    t_stat, p_value = stats.ttest_1samp(sample, null_hypothesis)
+    
+    # Make decision
+    if p_value < alpha:
+        decision = "Reject null hypothesis"
+    else:
+        decision = "Fail to reject null hypothesis"
+    
+    return {
+        'test_statistic': t_stat,
+        'p_value': p_value,
+        'alpha': alpha,
+        'decision': decision
+    }
+
+# Example usage
+sample = np.random.normal(100, 15, 50)
+result = hypothesis_test(sample, 95)
+print(f"Test result: {result}")`
+            };
+
+            const demoArea = document.getElementById('stats-details');
+            demoArea.innerHTML = `
+                <div class="formula-box">
+                    <h4>💻 Implementation Code - ${type.charAt(0).toUpperCase() + type.slice(1)} Statistics</h4>
+                    <pre style="white-space: pre-wrap; font-size: 0.85rem; text-align: left;">${codeExamples[type] || 'Code example not available'}</pre>
+                </div>
+            `;
+        }
+
+        // Initialize the page
+        document.addEventListener('DOMContentLoaded', function() {
+            demoDescriptive();
+            updateDemo();
+        });
+    </script>
+</body>
+</html>
