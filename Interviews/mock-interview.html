@@ -26,6 +26,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-wrap: wrap;
         }
 
         .company-info {
@@ -71,6 +72,27 @@
             min-height: calc(100vh - 80px);
         }
 
+        .api-setup {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 3rem 2rem;
+            border-radius: 25px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .api-setup input {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 1rem;
+            border-radius: 10px;
+            width: 300px;
+            margin: 1rem;
+            font-family: inherit;
+        }
+
         .intro {
             text-align: center;
             margin-bottom: 2rem;
@@ -89,6 +111,19 @@
             -webkit-text-fill-color: transparent;
         }
 
+        .interviewer-intro {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            padding: 2rem;
+            border-radius: 20px;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .interviewer-avatar {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+
         .interview-container {
             background: rgba(255, 255, 255, 0.05);
             border-radius: 20px;
@@ -98,51 +133,97 @@
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        .interviewer {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            margin-bottom: 2rem;
-            background: rgba(255, 255, 255, 0.1);
-            padding: 1rem;
+        .chat-area {
+            background: rgba(255, 255, 255, 0.05);
             border-radius: 15px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            max-height: 400px;
+            overflow-y: auto;
         }
 
-        .interviewer-avatar {
-            width: 60px;
-            height: 60px;
-            background: linear-gradient(45deg, #667eea, #764ba2);
+        .message {
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        .ai-message {
+            justify-content: flex-start;
+        }
+
+        .user-message {
+            justify-content: flex-end;
+            flex-direction: row-reverse;
+        }
+
+        .message-avatar {
+            width: 50px;
+            height: 50px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.8rem;
-        }
-
-        .question-section {
-            margin-bottom: 2rem;
-        }
-
-        .domain-header {
-            background: linear-gradient(45deg, #667eea, #764ba2);
-            padding: 1rem;
-            border-radius: 15px;
-            margin-bottom: 1rem;
-            text-align: center;
+            font-size: 1.5rem;
             font-weight: bold;
-            font-size: 1.2rem;
         }
 
-        .question {
+        .ai-avatar {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+        }
+
+        .user-avatar {
+            background: linear-gradient(45deg, #3498db, #2980b9);
+        }
+
+        .message-content {
             background: rgba(255, 255, 255, 0.1);
+            padding: 1rem 1.5rem;
+            border-radius: 20px;
+            max-width: 70%;
+            line-height: 1.5;
+        }
+
+        .typing-indicator {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 1rem 1.5rem;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .typing-dots {
+            display: flex;
+            gap: 0.2rem;
+        }
+
+        .typing-dots div {
+            width: 8px;
+            height: 8px;
+            background: white;
+            border-radius: 50%;
+            animation: typing 1.4s infinite;
+        }
+
+        .typing-dots div:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dots div:nth-child(3) { animation-delay: 0.4s; }
+
+        .current-question {
+            background: rgba(102, 126, 234, 0.2);
+            border: 2px solid #667eea;
             padding: 1.5rem;
             border-radius: 15px;
             margin-bottom: 1rem;
-            border-left: 4px solid #667eea;
         }
 
-        .question h4 {
+        .question-category {
             color: #74b9ff;
+            font-weight: bold;
+            font-size: 0.9rem;
+            text-transform: uppercase;
             margin-bottom: 0.5rem;
         }
 
@@ -155,7 +236,7 @@
             color: white;
             font-family: inherit;
             resize: vertical;
-            min-height: 80px;
+            min-height: 100px;
             margin-top: 1rem;
         }
 
@@ -193,12 +274,19 @@
             transform: none;
         }
 
+        .progress-container {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 1rem;
+            border-radius: 10px;
+            margin-bottom: 2rem;
+        }
+
         .progress {
             background: rgba(255, 255, 255, 0.1);
             height: 8px;
             border-radius: 4px;
-            margin: 2rem 0;
             overflow: hidden;
+            margin: 1rem 0;
         }
 
         .progress-bar {
@@ -279,6 +367,15 @@
             text-align: left;
         }
 
+        .error {
+            background: rgba(231, 76, 60, 0.2);
+            border: 1px solid #e74c3c;
+            color: #e74c3c;
+            padding: 1rem;
+            border-radius: 10px;
+            margin: 1rem 0;
+        }
+
         .hidden {
             display: none;
         }
@@ -295,13 +392,14 @@
             }
         }
 
-        @keyframes fadeIn {
+        @keyframes slideIn {
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
         }
 
-        .fade-in {
-            animation: fadeIn 0.5s ease-out;
+        @keyframes typing {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-10px); }
         }
 
         @media (max-width: 768px) {
@@ -322,6 +420,10 @@
             .question-input {
                 flex-direction: column;
             }
+
+            .api-setup input {
+                width: 250px;
+            }
         }
     </style>
 </head>
@@ -335,52 +437,88 @@
     </div>
 
     <div class="main-container">
+        <!-- API Setup -->
+        <div class="api-setup" id="apiSetup">
+            <h2>🔑 Interview Setup</h2>
+            <p>Enter your OpenRouter API key for a dynamic, realistic interview experience:</p>
+            <input type="password" id="apiKey" placeholder="Enter your OpenRouter API key">
+            <br>
+            <button class="btn" onclick="validateApiAndStart()">Enter MarsMart</button>
+            <p style="font-size: 0.9rem; margin-top: 1rem; opacity: 0.7;">
+                Get your free API key at <a href="https://openrouter.ai" target="_blank" style="color: #3498db;">OpenRouter.ai</a>
+            </p>
+        </div>
+
         <!-- Intro Section -->
-        <div class="intro" id="intro">
+        <div class="intro hidden" id="intro">
             <h1>🎯 Welcome to MarsMart!</h1>
             <p style="font-size: 1.2rem; margin-bottom: 1.5rem;">
-                Thank you for your interest in the Data Scientist position at MarsMart, 
-                the leading interplanetary e-commerce platform.
+                The premier interplanetary e-commerce platform connecting Earth, Mars, and beyond.
             </p>
             <p style="margin-bottom: 2rem; line-height: 1.6;">
-                This interview will cover various aspects of data science including technical skills, 
-                programming knowledge, and behavioral questions. You'll have the opportunity to showcase 
-                your expertise across multiple domains and ask questions about our company.
+                You're interviewing for our Data Scientist position - a role that involves revolutionary 
+                work in predictive analytics across planetary markets, space logistics optimization, 
+                and cutting-edge AI applications for interplanetary commerce.
             </p>
-            <button class="btn" onclick="startInterview()">Start Interview</button>
+        </div>
+
+        <!-- Interviewer Introduction -->
+        <div class="interviewer-intro hidden" id="interviewerIntro">
+            <div class="interviewer-avatar">👨‍💼</div>
+            <h2>Meet Dr. Marcus Chen</h2>
+            <p style="font-size: 1.2rem; margin-bottom: 1rem;">
+                "Welcome! I'm Dr. Marcus Chen, Director of Data Science at MarsMart. I've spent 15 years 
+                building ML systems at scale - from early fintech disruption to now pioneering 
+                interplanetary commerce analytics."
+            </p>
+            <p style="margin-bottom: 1.5rem;">
+                I believe the best interviews are conversations where we explore your thinking process. 
+                I'll be asking about your technical depth, problem-solving approach, and how you'd thrive 
+                in our fast-paced, innovation-driven environment.
+            </p>
+            <button class="btn" onclick="startInterview()">Ready? Let's Begin!</button>
         </div>
 
         <!-- Interview Section -->
         <div class="interview-container hidden" id="interviewContainer">
-            <div class="interviewer fade-in">
-                <div class="interviewer-avatar">👨‍💼</div>
-                <div>
-                    <h3>Alex Chen - Senior Data Science Manager</h3>
-                    <p>"Looking forward to learning about your background and expertise!"</p>
+            <div class="progress-container">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span>Interview Progress</span>
+                    <span id="progressText">Question 1 of 15</span>
+                </div>
+                <div class="progress">
+                    <div class="progress-bar" id="progressBar"></div>
                 </div>
             </div>
 
-            <div class="progress">
-                <div class="progress-bar" id="progressBar"></div>
+            <div class="chat-area" id="chatArea">
+                <!-- Messages will be inserted here -->
             </div>
 
-            <div id="questionsContainer"></div>
+            <div class="current-question" id="currentQuestion">
+                <div class="question-category" id="questionCategory">Loading...</div>
+                <div id="questionText">Preparing your first question...</div>
+                <textarea class="answer-input" id="answerInput" placeholder="Type your answer here..." disabled></textarea>
+            </div>
 
-            <button class="btn" id="nextBtn" onclick="nextSection()" disabled>Continue to Next Section</button>
+            <button class="btn" id="submitAnswer" onclick="submitAnswer()" disabled>Submit Answer</button>
         </div>
 
         <!-- User Questions Section -->
         <div class="user-questions hidden" id="userQuestionsSection">
             <h3>🤔 Your Turn to Ask Questions!</h3>
             <p style="text-align: center; margin-bottom: 2rem;">
-                Now you can ask up to 3 questions about MarsMart, the role, or anything else you'd like to know.
+                Now you can ask Dr. Chen up to 3 questions about MarsMart, the role, team culture, 
+                or anything else you'd like to know.
             </p>
-            <div id="userQuestionsContainer">
-                <div class="question-input">
-                    <input type="text" placeholder="Ask your first question..." id="userQ1">
-                    <button class="ask-btn" onclick="askQuestion(1)">Ask</button>
-                </div>
+            <div class="chat-area" id="userChatArea" style="max-height: 300px;"></div>
+            <div class="question-input">
+                <input type="text" placeholder="Ask Dr. Chen a question..." id="userQuestionInput">
+                <button class="ask-btn" onclick="askUserQuestion()">Ask</button>
             </div>
+            <p style="text-align: center; margin-top: 1rem;">
+                Questions remaining: <span id="questionsRemaining">3</span>
+            </p>
             <button class="btn" id="finishBtn" onclick="finishInterview()" disabled>Complete Interview</button>
         </div>
 
@@ -395,199 +533,396 @@
     </div>
 
     <script>
-        let currentSection = 0;
-        let currentQuestionInSection = 0;
-        let answers = {};
-        let score = 0;
+        let apiKey = '';
+        let currentQuestionIndex = 0;
+        let answers = [];
         let userQuestionsAsked = 0;
+        let interviewScore = 0;
 
-        const sections = [
-            {
-                name: "Basic Data Science",
-                questions: [
-                    { id: "ds1", question: "Explain the difference between supervised and unsupervised learning with examples.", weight: 10 },
-                    { id: "ds2", question: "What is the curse of dimensionality and how would you handle it?", weight: 15 },
-                    { id: "ds3", question: "How would you handle missing data in a dataset? Discuss different strategies.", weight: 10 }
-                ]
-            },
-            {
-                name: "Python Programming",
-                questions: [
-                    { id: "py1", question: "Write a Python function to find the most frequent element in a list.", weight: 10 },
-                    { id: "py2", question: "Explain the difference between list comprehension and generator expressions. When would you use each?", weight: 12 }
-                ]
-            },
-            {
-                name: "Neural Networks",
-                questions: [
-                    { id: "nn1", question: "Explain backpropagation algorithm and its role in training neural networks.", weight: 15 },
-                    { id: "nn2", question: "What is the vanishing gradient problem and how do modern architectures address it?", weight: 18 },
-                    { id: "nn3", question: "Compare different activation functions (ReLU, Sigmoid, Tanh) and their use cases.", weight: 12 }
-                ]
-            },
-            {
-                name: "Transformers & Attention",
-                questions: [
-                    { id: "tr1", question: "Explain the self-attention mechanism in Transformers. Why is it important?", weight: 20 },
-                    { id: "tr2", question: "What are the advantages of Transformers over RNNs for sequence modeling?", weight: 18 }
-                ]
-            },
-            {
-                name: "Generative AI",
-                questions: [
-                    { id: "gen1", question: "Explain the concept of fine-tuning in large language models. What is RLHF?", weight: 20 },
-                    { id: "gen2", question: "How would you evaluate the quality of generated text from a language model?", weight: 15 },
-                    { id: "gen3", question: "Discuss potential risks and ethical considerations when deploying generative AI systems.", weight: 18 }
-                ]
-            },
-            {
-                name: "Behavioral Questions",
-                questions: [
-                    { id: "beh1", question: "Tell me about a challenging data science project you worked on. What obstacles did you face and how did you overcome them?", weight: 15 },
-                    { id: "beh2", question: "How do you communicate complex technical results to non-technical stakeholders?", weight: 12 }
-                ]
-            },
-            {
-                name: "Deployment & MLOps",
-                questions: [
-                    { id: "dep1", question: "How would you monitor a machine learning model in production? What metrics would you track?", weight: 15 },
-                    { id: "dep2", question: "Describe strategies for handling model drift and when you might need to retrain a model.", weight: 18 },
-                    { id: "dep3", question: "What considerations are important when scaling ML models for high-traffic applications?", weight: 15 }
-                ]
+        const questionCategories = [
+            'Machine Learning Fundamentals',
+            'Python & Programming',
+            'Statistics & Mathematics', 
+            'Neural Networks & Deep Learning',
+            'Transformers & NLP',
+            'Generative AI & LLMs',
+            'MLOps & Deployment',
+            'Behavioral & Problem Solving'
+        ];
+
+        async function validateApiAndStart() {
+            apiKey = document.getElementById('apiKey').value.trim();
+            if (!apiKey) {
+                alert('Please enter your OpenRouter API key to continue.');
+                return;
             }
-        ];
-
-        const marsmartResponses = [
-            "That's a great question! At MarsMart, we're building the future of interplanetary commerce, connecting Earth, Mars, and soon other planets in our solar system.",
-            "We believe in fostering innovation and giving our data scientists the freedom to experiment with cutting-edge technologies while solving real-world problems.",
-            "Our work environment is collaborative and fast-paced. We're currently working on exciting projects like demand forecasting across different planetary markets and optimizing space logistics.",
-            "We offer competitive compensation, stock options, and the unique opportunity to literally help shape commerce across planets!",
-            "Our data science team works closely with engineers, product managers, and domain experts to ensure our models create real business value."
-        ];
-
-        function startInterview() {
-            document.getElementById('intro').classList.add('hidden');
-            document.getElementById('interviewContainer').classList.remove('hidden');
-            showCurrentSection();
+            
+            try {
+                await testApiConnection();
+                document.getElementById('apiSetup').classList.add('hidden');
+                document.getElementById('intro').classList.remove('hidden');
+                setTimeout(() => {
+                    document.getElementById('intro').classList.add('hidden');
+                    document.getElementById('interviewerIntro').classList.remove('hidden');
+                }, 3000);
+            } catch (error) {
+                showError('Invalid API key or connection failed. Please check your key and try again.');
+            }
         }
 
-        function showCurrentSection() {
-            const section = sections[currentSection];
-            const container = document.getElementById('questionsContainer');
+        async function testApiConnection() {
+            const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${apiKey}`,
+                    'Content-Type': 'application/json',
+                    'HTTP-Referer': window.location.href,
+                    'X-Title': 'MarsMart Interview'
+                },
+                body: JSON.stringify({
+                    model: "anthropic/claude-3-haiku",
+                    messages: [{ role: "user", content: "Hello" }],
+                    max_tokens: 10
+                })
+            });
+
+            if (!response.ok) throw new Error('API connection failed');
+        }
+
+        async function startInterview() {
+            document.getElementById('interviewerIntro').classList.add('hidden');
+            document.getElementById('interviewContainer').classList.remove('hidden');
             
-            container.innerHTML = `
-                <div class="domain-header fade-in">
-                    ${section.name} (${currentSection + 1}/${sections.length})
+            addMessage(true, "Excellent! Let's dive in. I'll be asking you about various aspects of data science - from fundamentals to advanced topics. Take your time with each answer, and feel free to think out loud. I love seeing the thought process behind solutions.");
+            
+            setTimeout(askNextQuestion, 2000);
+        }
+
+        async function askNextQuestion() {
+            if (currentQuestionIndex >= 12) {
+                moveToUserQuestions();
+                return;
+            }
+
+            showTypingIndicator();
+            
+            try {
+                const category = questionCategories[currentQuestionIndex % questionCategories.length];
+                const difficulty = currentQuestionIndex < 4 ? 'beginner' : 
+                                 currentQuestionIndex < 8 ? 'intermediate' : 'advanced';
+                
+                const questionData = await generateInterviewQuestion(category, difficulty, currentQuestionIndex);
+                
+                hideTypingIndicator();
+                
+                document.getElementById('questionCategory').textContent = category;
+                document.getElementById('questionText').textContent = questionData.question;
+                document.getElementById('answerInput').value = '';
+                document.getElementById('answerInput').disabled = false;
+                document.getElementById('submitAnswer').disabled = false;
+                
+                updateProgress();
+                
+            } catch (error) {
+                hideTypingIndicator();
+                showError('Failed to generate question. Please check your connection.');
+            }
+        }
+
+        async function generateInterviewQuestion(category, difficulty, questionNumber) {
+            const context = questionNumber === 0 ? 
+                "This is the first question, so start with something foundational but engaging." :
+                `Previous questions covered: ${answers.map(a => a.category).join(', ')}. Build on this naturally.`;
+
+            const prompt = `You are Dr. Marcus Chen, Director of Data Science at MarsMart (interplanetary e-commerce). You're conducting a data scientist interview.
+
+Your personality: 15 years experience, direct but encouraging, asks follow-up questions, shares brief industry insights, tests both technical depth and practical thinking.
+
+Generate a ${difficulty} level interview question for: ${category}
+
+Context: ${context}
+
+MarsMart background: We analyze shopping patterns across Earth, Mars, and upcoming lunar markets. We handle massive scale (billions of transactions), real-time personalization, supply chain optimization across space, and cutting-edge AI for demand forecasting.
+
+Format as JSON:
+{
+    "question": "Your engaging interview question in Dr. Chen's voice - make it practical and relevant to MarsMart's challenges",
+    "evaluation_criteria": "What you'll be looking for in a strong answer",
+    "follow_up": "Potential follow-up question if they answer well"
+}
+
+Make it conversational and tie to real MarsMart scenarios when possible. Dr. Chen might say things like "Here's what we see at MarsMart..." or "In my experience..."`;
+
+            const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${apiKey}`,
+                    'Content-Type': 'application/json',
+                    'HTTP-Referer': window.location.href,
+                    'X-Title': 'MarsMart Interview'
+                },
+                body: JSON.stringify({
+                    model: "anthropic/claude-3-haiku",
+                    messages: [{ role: "user", content: prompt }],
+                    max_tokens: 400,
+                    temperature: 0.7
+                })
+            });
+
+            const data = await response.json();
+            const content = data.choices[0].message.content;
+            
+            try {
+                return JSON.parse(content);
+            } catch (e) {
+                return {
+                    question: `Tell me about your experience with ${category.toLowerCase()}. How would you apply it to solve challenges in interplanetary e-commerce?`,
+                    evaluation_criteria: "Technical understanding and practical application",
+                    follow_up: "Can you give me a specific example?"
+                };
+            }
+        }
+
+        async function submitAnswer() {
+            const answer = document.getElementById('answerInput').value.trim();
+            if (!answer) {
+                alert('Please provide an answer before submitting.');
+                return;
+            }
+
+            // Save answer
+            answers.push({
+                category: document.getElementById('questionCategory').textContent,
+                question: document.getElementById('questionText').textContent,
+                answer: answer
+            });
+
+            // Add user message
+            addMessage(false, answer);
+
+            // Disable input
+            document.getElementById('answerInput').disabled = true;
+            document.getElementById('submitAnswer').disabled = true;
+
+            // Generate AI feedback
+            showTypingIndicator();
+            
+            try {
+                const feedback = await generateFeedback(answer, answers[answers.length - 1]);
+                hideTypingIndicator();
+                addMessage(true, feedback);
+                
+                currentQuestionIndex++;
+                
+                setTimeout(askNextQuestion, 3000);
+                
+            } catch (error) {
+                hideTypingIndicator();
+                addMessage(true, "Interesting perspective! Let's move to the next topic.");
+                currentQuestionIndex++;
+                setTimeout(askNextQuestion, 2000);
+            }
+        }
+
+        async function generateFeedback(answer, questionData) {
+            const prompt = `You are Dr. Marcus Chen providing brief interview feedback. Keep it encouraging but honest.
+
+Question: "${questionData.question}"
+Candidate's Answer: "${answer}"
+
+Provide a brief 2-3 sentence response that:
+1. Acknowledges their answer
+2. Adds a brief insight or follow-up thought
+3. Naturally transitions to the next topic
+
+Stay in character as an experienced interviewer. Be encouraging but maintain professional standards.`;
+
+            const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${apiKey}`,
+                    'Content-Type': 'application/json',
+                    'HTTP-Referer': window.location.href,
+                    'X-Title': 'MarsMart Interview'
+                },
+                body: JSON.stringify({
+                    model: "anthropic/claude-3-haiku",
+                    messages: [{ role: "user", content: prompt }],
+                    max_tokens: 150,
+                    temperature: 0.6
+                })
+            });
+
+            const data = await response.json();
+            return data.choices[0].message.content;
+        }
+
+        function addMessage(isAI, text) {
+            const chatArea = document.getElementById('chatArea');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isAI ? 'ai-message' : 'user-message'}`;
+            
+            messageDiv.innerHTML = `
+                <div class="message-avatar ${isAI ? 'ai-avatar' : 'user-avatar'}">
+                    ${isAI ? '👨‍💼' : '👤'}
+                </div>
+                <div class="message-content">${text}</div>
+            `;
+            
+            chatArea.appendChild(messageDiv);
+            chatArea.scrollTop = chatArea.scrollHeight;
+        }
+
+        function showTypingIndicator() {
+            const chatArea = document.getElementById('chatArea');
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'message ai-message';
+            typingDiv.id = 'typingIndicator';
+            
+            typingDiv.innerHTML = `
+                <div class="message-avatar ai-avatar">👨‍💼</div>
+                <div class="typing-indicator">
+                    <span>Dr. Chen is thinking</span>
+                    <div class="typing-dots">
+                        <div></div>
+                        <div></div>
+                        <div></div>
+                    </div>
                 </div>
             `;
-
-            section.questions.forEach((q, index) => {
-                container.innerHTML += `
-                    <div class="question fade-in">
-                        <h4>Q${index + 1}: ${q.question}</h4>
-                        <textarea class="answer-input" id="${q.id}" placeholder="Type your answer here..." 
-                                onkeyup="checkSectionComplete()"></textarea>
-                    </div>
-                `;
-            });
-
-            updateProgress();
-        }
-
-        function checkSectionComplete() {
-            const section = sections[currentSection];
-            let allAnswered = true;
-
-            section.questions.forEach(q => {
-                const answer = document.getElementById(q.id).value.trim();
-                if (answer === '') {
-                    allAnswered = false;
-                } else {
-                    answers[q.id] = answer;
-                }
-            });
-
-            document.getElementById('nextBtn').disabled = !allAnswered;
-        }
-
-        function nextSection() {
-            // Score current section
-            scoreCurrentSection();
             
-            currentSection++;
-            currentQuestionInSection = 0;
-
-            if (currentSection >= sections.length) {
-                showUserQuestions();
-            } else {
-                showCurrentSection();
-            }
+            chatArea.appendChild(typingDiv);
+            chatArea.scrollTop = chatArea.scrollHeight;
         }
 
-        function scoreCurrentSection() {
-            const section = sections[currentSection];
-            section.questions.forEach(q => {
-                const answer = answers[q.id];
-                if (answer && answer.length > 20) { // Basic quality check
-                    score += q.weight * (answer.length > 100 ? 1 : 0.7); // Bonus for detailed answers
-                }
-            });
+        function hideTypingIndicator() {
+            const typingIndicator = document.getElementById('typingIndicator');
+            if (typingIndicator) typingIndicator.remove();
         }
 
         function updateProgress() {
-            const progress = ((currentSection + 1) / sections.length) * 100;
+            const progress = ((currentQuestionIndex + 1) / 12) * 100;
             document.getElementById('progressBar').style.width = progress + '%';
+            document.getElementById('progressText').textContent = `Question ${currentQuestionIndex + 1} of 12`;
         }
 
-        function showUserQuestions() {
+        function moveToUserQuestions() {
             document.getElementById('interviewContainer').classList.add('hidden');
             document.getElementById('userQuestionsSection').classList.remove('hidden');
+            
+            addUserMessage(true, "Great job on the technical questions! Now I'd love to hear what questions you have for me about MarsMart, the role, or our team culture. What would you like to know?");
         }
 
-        function askQuestion(questionNum) {
-            const input = document.getElementById(`userQ${questionNum}`);
+        function addUserMessage(isAI, text) {
+            const chatArea = document.getElementById('userChatArea');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isAI ? 'ai-message' : 'user-message'}`;
+            
+            messageDiv.innerHTML = `
+                <div class="message-avatar ${isAI ? 'ai-avatar' : 'user-avatar'}">
+                    ${isAI ? '👨‍💼' : '👤'}
+                </div>
+                <div class="message-content">${text}</div>
+            `;
+            
+            chatArea.appendChild(messageDiv);
+            chatArea.scrollTop = chatArea.scrollHeight;
+        }
+
+        async function askUserQuestion() {
+            const input = document.getElementById('userQuestionInput');
             const question = input.value.trim();
             
-            if (question === '') return;
+            if (!question || userQuestionsAsked >= 3) return;
 
-            userQuestionsAsked++;
-            
-            // Add interviewer response
-            const container = document.getElementById('userQuestionsContainer');
-            const responseIndex = Math.floor(Math.random() * marsmartResponses.length);
-            
-            container.innerHTML += `
-                <div style="background: rgba(255,255,255,0.1); padding: 1rem; border-radius: 10px; margin: 1rem 0;">
-                    <strong>Your Question:</strong> ${question}<br><br>
-                    <strong>Alex:</strong> ${marsmartResponses[responseIndex]}
-                </div>
-            `;
-
+            addUserMessage(false, question);
             input.value = '';
-            input.disabled = true;
+            userQuestionsAsked++;
 
-            if (userQuestionsAsked < 3) {
-                container.innerHTML += `
-                    <div class="question-input">
-                        <input type="text" placeholder="Ask your ${userQuestionsAsked === 1 ? 'second' : 'third'} question..." id="userQ${userQuestionsAsked + 1}">
-                        <button class="ask-btn" onclick="askQuestion(${userQuestionsAsked + 1})">Ask</button>
-                    </div>
-                `;
+            // Generate AI response
+            showUserTypingIndicator();
+            
+            try {
+                const response = await generateInterviewerResponse(question);
+                hideUserTypingIndicator();
+                addUserMessage(true, response);
+            } catch (error) {
+                hideUserTypingIndicator();
+                addUserMessage(true, "That's a great question! At MarsMart, we're always looking for curious minds who ask thoughtful questions about our mission and culture.");
             }
 
+            document.getElementById('questionsRemaining').textContent = 3 - userQuestionsAsked;
+            
             if (userQuestionsAsked >= 3) {
+                document.getElementById('userQuestionInput').disabled = true;
                 document.getElementById('finishBtn').disabled = false;
             }
         }
 
-        function finishInterview() {
-            // Calculate final score
-            const maxScore = sections.reduce((total, section) => {
-                return total + section.questions.reduce((sectionTotal, q) => sectionTotal + q.weight, 0);
-            }, 0);
+        async function generateInterviewerResponse(question) {
+            const prompt = `You are Dr. Marcus Chen, Director of Data Science at MarsMart, answering an interviewee's question.
 
-            const scorePercentage = (score / maxScore) * 100;
-            const hired = scorePercentage >= 60; // 60% threshold for hiring
+Their question: "${question}"
+
+Respond as Dr. Chen - experienced, enthusiastic about MarsMart's mission, knowledgeable about data science at scale. Keep it conversational and informative, 2-4 sentences.
+
+MarsMart context: Interplanetary e-commerce, innovative data challenges, fast-paced environment, strong team culture, cutting-edge ML applications.`;
+
+            const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${apiKey}`,
+                    'Content-Type': 'application/json',
+                    'HTTP-Referer': window.location.href,
+                    'X-Title': 'MarsMart Interview'
+                },
+                body: JSON.stringify({
+                    model: "anthropic/claude-3-haiku",
+                    messages: [{ role: "user", content: prompt }],
+                    max_tokens: 200,
+                    temperature: 0.7
+                })
+            });
+
+            const data = await response.json();
+            return data.choices[0].message.content;
+        }
+
+        function showUserTypingIndicator() {
+            const chatArea = document.getElementById('userChatArea');
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'message ai-message';
+            typingDiv.id = 'userTypingIndicator';
+            
+            typingDiv.innerHTML = `
+                <div class="message-avatar ai-avatar">👨‍💼</div>
+                <div class="typing-indicator">
+                    <span>Dr. Chen is responding</span>
+                    <div class="typing-dots">
+                        <div></div>
+                        <div></div>
+                        <div></div>
+                    </div>
+                </div>
+            `;
+            
+            chatArea.appendChild(typingDiv);
+            chatArea.scrollTop = chatArea.scrollHeight;
+        }
+
+        function hideUserTypingIndicator() {
+            const indicator = document.getElementById('userTypingIndicator');
+            if (indicator) indicator.remove();
+        }
+
+        async function finishInterview() {
+            // Calculate score based on answer quality and engagement
+            const avgAnswerLength = answers.reduce((sum, a) => sum + a.answer.length, 0) / answers.length;
+            const engagementScore = userQuestionsAsked * 20;
+            const qualityScore = avgAnswerLength > 50 ? 60 : avgAnswerLength > 30 ? 40 : 20;
+            
+            interviewScore = engagementScore + qualityScore;
+            const hired = interviewScore >= 70;
 
             // Show results
             document.getElementById('userQuestionsSection').classList.add('hidden');
@@ -604,12 +939,11 @@
                 resultText.className = 'hired';
                 feedback.innerHTML = `
                     <h3>🎊 Congratulations!</h3>
-                    <p>We're excited to offer you the Data Scientist position at MarsMart! 
-                    Your technical knowledge and communication skills impressed our team.</p>
-                    <p><strong>Your Score:</strong> ${Math.round(scorePercentage)}%</p>
-                    <p><strong>Next Steps:</strong> Our HR team will contact you within 2-3 business days 
-                    with the formal offer and details about your start date.</p>
-                    <p>Welcome to the MarsMart family! 🚀</p>
+                    <p>Dr. Chen was impressed with your technical depth and thoughtful questions. 
+                    You demonstrated exactly the kind of analytical thinking and curiosity we need at MarsMart!</p>
+                    <p><strong>Interview Score:</strong> ${interviewScore}/100</p>
+                    <p><strong>Next Steps:</strong> Our talent acquisition team will reach out within 48 hours 
+                    with your offer package. Welcome to the MarsMart family! 🚀</p>
                 `;
             } else {
                 resultAnimation.textContent = '😔';
@@ -618,29 +952,52 @@
                 resultText.className = 'not-hired';
                 feedback.innerHTML = `
                     <h3>Thank You for Your Interest</h3>
-                    <p>While we were impressed with your enthusiasm, we've decided to move forward 
-                    with other candidates whose experience more closely matches our current needs.</p>
-                    <p><strong>Your Score:</strong> ${Math.round(scorePercentage)}%</p>
-                    <p><strong>Feedback:</strong> We encourage you to continue developing your skills, 
-                    particularly in areas like ${scorePercentage < 40 ? 'fundamental data science concepts and neural networks' : 'advanced topics like transformers and MLOps'}.</p>
-                    <p>We encourage you to apply again in the future as your skills develop. Good luck! 🌟</p>
+                    <p>While we appreciated your enthusiasm, we've decided to move forward with candidates 
+                    whose experience more closely aligns with our current needs.</p>
+                    <p><strong>Interview Score:</strong> ${interviewScore}/100</p>
+                    <p><strong>Feedback:</strong> Continue developing your technical skills and 
+                    practice articulating complex concepts clearly. We encourage you to apply again as your expertise grows.</p>
+                    <p>Best of luck in your data science journey! 🌟</p>
                 `;
             }
         }
 
         function restartInterview() {
-            currentSection = 0;
-            currentQuestionInSection = 0;
-            answers = {};
-            score = 0;
+            currentQuestionIndex = 0;
+            answers = [];
             userQuestionsAsked = 0;
+            interviewScore = 0;
 
             document.getElementById('results').classList.add('hidden');
-            document.getElementById('intro').classList.remove('hidden');
-            document.getElementById('nextBtn').disabled = true;
-            document.getElementById('finishBtn').disabled = true;
+            document.getElementById('apiSetup').classList.remove('hidden');
+            document.getElementById('chatArea').innerHTML = '';
+            document.getElementById('userChatArea').innerHTML = '';
             document.getElementById('progressBar').style.width = '0%';
+            document.getElementById('questionsRemaining').textContent = '3';
+            document.getElementById('userQuestionInput').disabled = false;
+            document.getElementById('finishBtn').disabled = true;
         }
+
+        function showError(message) {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error';
+            errorDiv.textContent = message;
+            document.querySelector('.main-container').appendChild(errorDiv);
+            
+            setTimeout(() => errorDiv.remove(), 5000);
+        }
+
+        // Initialize
+        document.getElementById('userQuestionInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                askUserQuestion();
+            }
+        });
+
+        document.getElementById('answerInput').addEventListener('input', function() {
+            const hasContent = this.value.trim().length > 0;
+            document.getElementById('submitAnswer').disabled = !hasContent;
+        });
     </script>
 </body>
 </html>
