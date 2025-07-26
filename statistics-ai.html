@@ -568,7 +568,8 @@
             const data = generateRandomData(200, 50, 15);
             const stats = calculateStats(data);
             
-            const ctx = document.getElementById('statsChart').getContext('2d');
+            const ctx = document.getElementById('statsChart');
+            if (!ctx) return;
             
             if (currentChart) currentChart.destroy();
             
@@ -589,7 +590,7 @@
                 histogram[binIndex]++;
             });
 
-            currentChart = new Chart(ctx, {
+            currentChart = new Chart(ctx.getContext('2d'), {
                 type: 'bar',
                 data: {
                     labels: binLabels,
@@ -647,11 +648,12 @@
             const tStat = (stats1.mean - stats2.mean) / (pooledStd * Math.sqrt(1/sample1.length + 1/sample2.length));
             const df = sample1.length + sample2.length - 2;
             
-            const ctx = document.getElementById('statsChart').getContext('2d');
+            const ctx = document.getElementById('statsChart');
+            if (!ctx) return;
             
             if (currentChart) currentChart.destroy();
 
-            currentChart = new Chart(ctx, {
+            currentChart = new Chart(ctx.getContext('2d'), {
                 type: 'scatter',
                 data: {
                     datasets: [
@@ -730,11 +732,12 @@
             const ssTot = y.reduce((sum, yi) => sum + Math.pow(yi - yMean, 2), 0);
             const rSquared = 1 - (ssRes / ssTot);
             
-            const ctx = document.getElementById('statsChart').getContext('2d');
+            const ctx = document.getElementById('statsChart');
+            if (!ctx) return;
             
             if (currentChart) currentChart.destroy();
 
-            currentChart = new Chart(ctx, {
+            currentChart = new Chart(ctx.getContext('2d'), {
                 type: 'scatter',
                 data: {
                     datasets: [
@@ -802,11 +805,12 @@
                 bayesianUpdates.push(currentProb);
             });
             
-            const ctx = document.getElementById('statsChart').getContext('2d');
+            const ctx = document.getElementById('statsChart');
+            if (!ctx) return;
             
             if (currentChart) currentChart.destroy();
 
-            currentChart = new Chart(ctx, {
+            currentChart = new Chart(ctx.getContext('2d'), {
                 type: 'line',
                 data: {
                     labels: ['Prior', 'Update 1', 'Update 2', 'Update 3', 'Update 4', 'Update 5'],
@@ -874,7 +878,8 @@
             const ciLower = stats.mean - marginError;
             const ciUpper = stats.mean + marginError;
             
-            const ctx = document.getElementById('interactiveChart').getContext('2d');
+            const ctx = document.getElementById('interactiveChart');
+            if (!ctx) return;
             
             if (interactiveChart) interactiveChart.destroy();
             
@@ -895,7 +900,7 @@
                 histogram[binIndex]++;
             });
 
-            interactiveChart = new Chart(ctx, {
+            interactiveChart = new Chart(ctx.getContext('2d'), {
                 type: 'bar',
                 data: {
                     labels: binLabels,
@@ -1207,8 +1212,21 @@ print(f"Test result: {result}")`
 
         // Initialize the page
         document.addEventListener('DOMContentLoaded', function() {
-            demoDescriptive();
-            updateDemo();
+            setTimeout(() => {
+                demoDescriptive();
+                updateDemo();
+            }, 500);
+        });
+
+        // Add click event listeners as backup
+        window.addEventListener('load', function() {
+            // Ensure all functions are globally available
+            window.demoDescriptive = demoDescriptive;
+            window.demoInferential = demoInferential;
+            window.demoPredictive = demoPredictive;
+            window.demoProbability = demoProbability;
+            window.showStatsCode = showStatsCode;
+            window.updateDemo = updateDemo;
         });
     </script>
 </body>
