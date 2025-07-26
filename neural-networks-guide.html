@@ -1,0 +1,2879 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Neural Networks Deep Dive</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.26.0/plotly.min.js"></script>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']]
+            }
+        };
+    </script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            line-height: 1.6;
+        }
+
+        .header {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 2rem;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1);
+            background-size: 200% 200%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: gradientShift 3s ease-in-out infinite;
+        }
+
+        .nav {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 1rem;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .nav-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .nav-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid transparent;
+            color: white;
+            padding: 0.8rem 1.5rem;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: bold;
+        }
+
+        .nav-btn:hover, .nav-btn.active {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .back-btn {
+            position: absolute;
+            left: 2rem;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .section {
+            background: rgba(255, 255, 255, 0.05);
+            margin: 2rem 0;
+            padding: 2rem;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            display: none;
+        }
+
+        .section.active {
+            display: block;
+            animation: fadeInUp 0.5s ease-out;
+        }
+
+        .section h2 {
+            font-size: 2.5rem;
+            margin-bottom: 2rem;
+            text-align: center;
+            color: #4ecdc4;
+        }
+
+        .content-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin: 2rem 0;
+        }
+
+        .content-card {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 2rem;
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .visualization {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 1.5rem;
+            border-radius: 15px;
+            margin: 1.5rem 0;
+            text-align: center;
+        }
+
+        .interactive-demo {
+            background: linear-gradient(45deg, rgba(255, 107, 107, 0.1), rgba(78, 205, 196, 0.1));
+            padding: 2rem;
+            border-radius: 20px;
+            margin: 2rem 0;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin: 1rem 0;
+            justify-content: center;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .control-group label {
+            font-size: 0.9rem;
+            font-weight: bold;
+        }
+
+        .slider {
+            width: 150px;
+            height: 5px;
+            border-radius: 5px;
+            background: rgba(255, 255, 255, 0.2);
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #4ecdc4;
+            cursor: pointer;
+        }
+
+        .math-equation {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 1.5rem;
+            border-radius: 10px;
+            margin: 1rem 0;
+            text-align: center;
+            font-size: 1.1rem;
+            border-left: 4px solid #4ecdc4;
+        }
+
+        .formula-explanation {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 0.5rem 0;
+            border-left: 3px solid #ff6b6b;
+        }
+
+        .network-canvas {
+            width: 100%;
+            height: 400px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            margin: 1rem 0;
+        }
+
+        .chart-container {
+            width: 100%;
+            height: 350px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            margin: 1rem 0;
+        }
+
+        .neuron {
+            fill: #4ecdc4;
+            stroke: #fff;
+            stroke-width: 2;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .neuron:hover {
+            fill: #ff6b6b;
+            r: 15;
+        }
+
+        .connection {
+            stroke: rgba(255, 255, 255, 0.6);
+            stroke-width: 2;
+            transition: all 0.3s ease;
+        }
+
+        .connection.active {
+            stroke: #ff6b6b;
+            stroke-width: 4;
+        }
+
+        .layer-label {
+            font-size: 14px;
+            font-weight: bold;
+            text-anchor: middle;
+            fill: #4ecdc4;
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #4ecdc4, #44a08d);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 0.5rem;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(78, 205, 196, 0.3);
+        }
+
+        .animation-controls {
+            text-align: center;
+            margin: 2rem 0;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 1rem 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(45deg, #4ecdc4, #44a08d);
+            border-radius: 4px;
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+
+        .highlight-box {
+            background: linear-gradient(45deg, rgba(255, 107, 107, 0.2), rgba(78, 205, 196, 0.2));
+            border: 2px solid #4ecdc4;
+            padding: 1.5rem;
+            border-radius: 15px;
+            margin: 1.5rem 0;
+        }
+
+        .tabs {
+            display: flex;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 25px;
+            padding: 0.5rem;
+            margin: 1rem 0;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 0.8rem 1rem;
+            text-align: center;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: bold;
+        }
+
+        .tab.active {
+            background: rgba(255, 255, 255, 0.2);
+            color: #4ecdc4;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 2rem 0;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes gradientShift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @media (max-width: 768px) {
+            .content-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .nav-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .container {
+                padding: 1rem;
+            }
+            
+            .back-btn {
+                position: relative;
+                left: auto;
+                top: auto;
+                transform: none;
+                margin-bottom: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <a href="index.html" class="back-btn">← Back to Hub</a>
+        <h1>🧠 Neural Networks Deep Dive</h1>
+        <p style="font-size: 1.2rem; opacity: 0.9;">
+            Master the mathematics and intuition behind modern AI architectures
+        </p>
+    </div>
+
+    <div class="nav">
+        <div class="nav-buttons">
+            <button class="nav-btn active" onclick="showSection('basics')">Neural Networks</button>
+            <button class="nav-btn" onclick="showSection('cnn')">CNNs</button>
+            <button class="nav-btn" onclick="showSection('rnn')">RNNs & LSTMs</button>
+            <button class="nav-btn" onclick="showSection('transformers')">Transformers</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Neural Networks Basics -->
+        <div id="basics" class="section active">
+            <h2>🔥 Neural Networks Fundamentals</h2>
+            
+            <div class="highlight-box">
+                <h3>What makes neural networks so powerful?</h3>
+                <p>Neural networks are universal function approximators that can learn complex patterns through the magic of backpropagation and gradient descent. Let's explore how they work from the ground up!</p>
+            </div>
+
+            <div class="tabs">
+                <div class="tab active" onclick="showTab('basics', 'architecture')">Architecture</div>
+                <div class="tab" onclick="showTab('basics', 'math')">Mathematics</div>
+                <div class="tab" onclick="showTab('basics', 'training')">Training Process</div>
+                <div class="tab" onclick="showTab('basics', 'demo')">Interactive Demo</div>
+            </div>
+
+            <div id="basics-architecture" class="tab-content active">
+                <div class="content-grid">
+                    <div class="content-card">
+                        <h3>🏗️ Neural Network Architecture</h3>
+                        <p>A neural network consists of layers of interconnected nodes (neurons). Each connection has a weight, and each neuron has an activation function.</p>
+                        
+                        <div class="math-equation">
+                            $$y = f(\sum_{i=1}^{n} w_i x_i + b)$$
+                        </div>
+                        
+                        <div class="formula-explanation">
+                            <strong>Where:</strong><br>
+                            • $y$ = neuron output<br>
+                            • $f$ = activation function<br>
+                            • $w_i$ = weight for input $i$<br>
+                            • $x_i$ = input value $i$<br>
+                            • $b$ = bias term
+                        </div>
+                    </div>
+                    
+                    <div class="content-card">
+                        <h3>🎯 Key Components</h3>
+                        <ul>
+                            <li><strong>Input Layer:</strong> Receives raw data</li>
+                            <li><strong>Hidden Layers:</strong> Process and transform data</li>
+                            <li><strong>Output Layer:</strong> Produces final predictions</li>
+                            <li><strong>Weights & Biases:</strong> Learnable parameters</li>
+                            <li><strong>Activation Functions:</strong> Introduce non-linearity</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="visualization">
+                    <h3>Interactive Neural Network</h3>
+                    <div id="basicNetworkViz" class="network-canvas"></div>
+                    <div class="controls">
+                        <div class="control-group">
+                            <label>Hidden Neurons</label>
+                            <input type="range" class="slider" id="hiddenNeurons" min="2" max="8" value="4" onchange="updateBasicNetwork()">
+                            <span id="hiddenCount">4</span>
+                        </div>
+                        <div class="control-group">
+                            <label>Learning Rate</label>
+                            <input type="range" class="slider" id="learningRate" min="0.01" max="1" step="0.01" value="0.1" onchange="updateLearningRate()">
+                            <span id="lrValue">0.1</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="basics-math" class="tab-content">
+                <div class="content-grid">
+                    <div class="content-card">
+                        <h3>🧮 Forward Propagation</h3>
+                        <p>Data flows forward through the network, being transformed at each layer:</p>
+                        
+                        <div class="math-equation">
+                            $$a^{[l]} = f^{[l]}(z^{[l]})$$
+                            $$z^{[l]} = W^{[l]}a^{[l-1]} + b^{[l]}$$
+                        </div>
+                        
+                        <div class="formula-explanation">
+                            Layer $l$ computation where $a^{[l]}$ is activation, $z^{[l]}$ is linear combination
+                        </div>
+
+                        <h4>Activation Functions:</h4>
+                        <div class="math-equation">
+                            $$\text{ReLU: } f(x) = \max(0, x)$$
+                            $$\text{Sigmoid: } f(x) = \frac{1}{1 + e^{-x}}$$
+                            $$\text{Tanh: } f(x) = \frac{e^x - e^{-x}}{e^x + e^{-x}}$$
+                        </div>
+                    </div>
+                    
+                    <div class="content-card">
+                        <h3>🔄 Backpropagation</h3>
+                        <p>The magic of learning! Gradients flow backward to update weights:</p>
+                        
+                        <div class="math-equation">
+                            $$\frac{\partial L}{\partial W^{[l]}} = \frac{\partial L}{\partial a^{[l]}} \frac{\partial a^{[l]}}{\partial z^{[l]}} \frac{\partial z^{[l]}}{\partial W^{[l]}}$$
+                        </div>
+                        
+                        <div class="formula-explanation">
+                            Chain rule in action! Each layer's gradient depends on the next layer's gradient.
+                        </div>
+
+                        <h4>Weight Update:</h4>
+                        <div class="math-equation">
+                            $$W^{[l]} := W^{[l]} - \alpha \frac{\partial L}{\partial W^{[l]}}$$
+                        </div>
+                    </div>
+                </div>
+
+                <div class="visualization">
+                    <h3>Activation Function Comparison</h3>
+                    <div id="activationChart" class="chart-container"></div>
+                </div>
+            </div>
+
+            <div id="basics-training" class="tab-content">
+                <div class="interactive-demo">
+                    <h3>🏃‍♂️ Training Process Visualization</h3>
+                    <p>Watch how a neural network learns to approximate a function through gradient descent!</p>
+                    
+                    <div class="animation-controls">
+                        <button class="btn" onclick="startTraining()">Start Training</button>
+                        <button class="btn" onclick="pauseTraining()">Pause</button>
+                        <button class="btn" onclick="resetTraining()">Reset</button>
+                    </div>
+                    
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="trainingProgress"></div>
+                    </div>
+                    
+                    <div class="content-grid">
+                        <div class="chart-container" id="lossChart"></div>
+                        <div class="chart-container" id="functionApprox"></div>
+                    </div>
+                    
+                    <div class="controls">
+                        <div class="control-group">
+                            <label>Batch Size</label>
+                            <input type="range" class="slider" id="batchSize" min="1" max="32" value="8">
+                            <span id="batchValue">8</span>
+                        </div>
+                        <div class="control-group">
+                            <label>Epochs</label>
+                            <input type="range" class="slider" id="epochs" min="10" max="200" value="100">
+                            <span id="epochValue">100</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="basics-demo" class="tab-content">
+                <div class="interactive-demo">
+                    <h3>🎮 Interactive Neural Network Playground</h3>
+                    <p>Create your own dataset and watch the network learn in real-time!</p>
+                    
+                    <div class="content-grid">
+                        <div class="content-card">
+                            <h4>Draw Your Dataset</h4>
+                            <p>Click to add points. Red = Class 1, Blue = Class 2</p>
+                            <canvas id="dataCanvas" width="400" height="300" style="background: rgba(255,255,255,0.1); border-radius: 10px; cursor: crosshair;"></canvas>
+                            <div class="controls">
+                                <button class="btn" onclick="clearDataset()">Clear</button>
+                                <button class="btn" onclick="generateSpiral()">Spiral Data</button>
+                                <button class="btn" onclick="generateCircles()">Circle Data</button>
+                            </div>
+                        </div>
+                        
+                        <div class="content-card">
+                            <h4>Network Configuration</h4>
+                            <div class="controls">
+                                <div class="control-group">
+                                    <label>Hidden Layers</label>
+                                    <input type="range" class="slider" id="numLayers" min="1" max="4" value="2">
+                                    <span id="layerCount">2</span>
+                                </div>
+                                <div class="control-group">
+                                    <label>Neurons per Layer</label>
+                                    <input type="range" class="slider" id="neuronsPerLayer" min="2" max="10" value="5">
+                                    <span id="neuronCount">5</span>
+                                </div>
+                                <div class="control-group">
+                                    <label>Activation</label>
+                                    <select id="activationSelect" style="background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.2); border-radius: 5px; padding: 0.5rem;">
+                                        <option value="relu">ReLU</option>
+                                        <option value="sigmoid">Sigmoid</option>
+                                        <option value="tanh">Tanh</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <button class="btn" onclick="trainOnData()">Train Network</button>
+                            <div id="trainStatus"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CNN Section -->
+        <div id="cnn" class="section">
+            <h2>🖼️ Convolutional Neural Networks</h2>
+            
+            <div class="highlight-box">
+                <h3>The power of spatial patterns!</h3>
+                <p>CNNs revolutionized computer vision by learning hierarchical features through convolution operations. From edges to objects, CNNs build understanding layer by layer.</p>
+            </div>
+
+            <div class="tabs">
+                <div class="tab active" onclick="showTab('cnn', 'convolution')">Convolution</div>
+                <div class="tab" onclick="showTab('cnn', 'architecture')">Architecture</div>
+                <div class="tab" onclick="showTab('cnn', 'filters')">Filter Visualization</div>
+                <div class="tab" onclick="showTab('cnn', 'demo')">CNN Demo</div>
+            </div>
+
+            <div id="cnn-convolution" class="tab-content active">
+                <div class="content-grid">
+                    <div class="content-card">
+                        <h3>🔍 Convolution Operation</h3>
+                        <p>The core of CNNs: sliding a filter (kernel) across an image to detect features.</p>
+                        
+                        <div class="math-equation">
+                            $$(I * K)(i,j) = \sum_{m}\sum_{n} I(i+m, j+n) \cdot K(m,n)$$
+                        </div>
+                        
+                        <div class="formula-explanation">
+                            Where $I$ is the input image, $K$ is the kernel/filter, and * denotes convolution
+                        </div>
+
+                        <h4>Key Properties:</h4>
+                        <ul>
+                            <li><strong>Translation Invariance:</strong> Detects features regardless of position</li>
+                            <li><strong>Parameter Sharing:</strong> Same filter applied everywhere</li>
+                            <li><strong>Local Connectivity:</strong> Each neuron connects to local region</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="content-card">
+                        <h3>📏 Mathematical Details</h3>
+                        
+                        <h4>Output Size:</h4>
+                        <div class="math-equation">
+                            $$O = \frac{I - K + 2P}{S} + 1$$
+                        </div>
+                        
+                        <div class="formula-explanation">
+                            $I$ = input size, $K$ = kernel size, $P$ = padding, $S$ = stride
+                        </div>
+
+                        <h4>Receptive Field:</h4>
+                        <div class="math-equation">
+                            $$RF_{l} = RF_{l-1} + (K_l - 1) \prod_{i=1}^{l-1} S_i$$
+                        </div>
+                        
+                        <div class="formula-explanation">
+                            How large an area of the input affects each output neuron
+                        </div>
+                    </div>
+                </div>
+
+                <div class="interactive-demo">
+                    <h3>🎯 Interactive Convolution</h3>
+                    <div class="content-grid">
+                        <div class="visualization">
+                            <h4>Input Image</h4>
+                            <canvas id="inputImage" width="200" height="200"></canvas>
+                        </div>
+                        <div class="visualization">
+                            <h4>Filter/Kernel</h4>
+                            <canvas id="filterKernel" width="100" height="100"></canvas>
+                        </div>
+                        <div class="visualization">
+                            <h4>Feature Map</h4>
+                            <canvas id="featureMap" width="200" height="200"></canvas>
+                        </div>
+                    </div>
+                    
+                    <div class="controls">
+                        <div class="control-group">
+                            <label>Filter Type</label>
+                            <select id="filterType" onchange="updateConvolution()" style="background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.2); border-radius: 5px; padding: 0.5rem;">
+                                <option value="edge">Edge Detection</option>
+                                <option value="blur">Gaussian Blur</option>
+                                <option value="sharpen">Sharpen</option>
+                                <option value="emboss">Emboss</option>
+                            </select>
+                        </div>
+                        <div class="control-group">
+                            <label>Stride</label>
+                            <input type="range" class="slider" id="stride" min="1" max="3" value="1" onchange="updateConvolution()">
+                            <span id="strideValue">1</span>
+                        </div>
+                        <div class="control-group">
+                            <label>Padding</label>
+                            <input type="range" class="slider" id="padding" min="0" max="2" value="0" onchange="updateConvolution()">
+                            <span id="paddingValue">0</span>
+                        </div>
+                    </div>
+                    
+                    <button class="btn" onclick="animateConvolution()">Animate Convolution</button>
+                </div>
+            </div>
+
+            <div id="cnn-architecture" class="tab-content">
+                <div class="content-grid">
+                    <div class="content-card">
+                        <h3>🏗️ CNN Architecture Components</h3>
+                        
+                        <h4>1. Convolutional Layers</h4>
+                        <p>Extract features using learnable filters</p>
+                        
+                        <h4>2. Pooling Layers</h4>
+                        <div class="math-equation">
+                            $$\text{Max Pool: } y_{i,j} = \max_{(m,n) \in R_{i,j}} x_{m,n}$$
+                        </div>
+                        
+                        <h4>3. Fully Connected Layers</h4>
+                        <p>Traditional neural network layers for final classification</p>
+                        
+                        <h4>4. Activation Functions</h4>
+                        <p>ReLU is most common: $f(x) = \max(0, x)$</p>
+                    </div>
+                    
+                    <div class="content-card">
+                        <h3>🔥 Popular CNN Architectures</h3>
+                        
+                        <h4>LeNet-5 (1998)</h4>
+                        <p>Conv → Pool → Conv → Pool → FC → FC</p>
+                        
+                        <h4>AlexNet (2012)</h4>
+                        <p>First deep CNN to win ImageNet</p>
+                        
+                        <h4>VGG (2014)</h4>
+                        <p>Very deep networks with small 3x3 filters</p>
+                        
+                        <h4>ResNet (2015)</h4>
+                        <p>Skip connections enabling very deep networks</p>
+                        <div class="math-equation">
+                            $$y = F(x) + x$$
+                        </div>
+                    </div>
+                </div>
+
+                <div class="visualization">
+                    <h3>CNN Architecture Visualization</h3>
+                    <div id="cnnArchViz" class="network-canvas"></div>
+                    <div class="controls">
+                        <button class="btn" onclick="showArchitecture('lenet')">LeNet-5</button>
+                        <button class="btn" onclick="showArchitecture('alexnet')">AlexNet</button>
+                        <button class="btn" onclick="showArchitecture('vgg')">VGG-16</button>
+                        <button class="btn" onclick="showArchitecture('resnet')">ResNet</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="cnn-filters" class="tab-content">
+                <div class="interactive-demo">
+                    <h3>🔬 Filter Visualization & Feature Maps</h3>
+                    <p>See what different CNN filters detect at various layers!</p>
+                    
+                    <div class="content-grid">
+                        <div class="content-card">
+                            <h4>Layer 1 Filters (Edge Detectors)</h4>
+                            <div id="layer1Filters" class="chart-container"></div>
+                        </div>
+                        <div class="content-card">
+                            <h4>Layer 2 Filters (Textures)</h4>
+                            <div id="layer2Filters" class="chart-container"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="content-grid">
+                        <div class="content-card">
+                            <h4>Layer 3 Filters (Patterns)</h4>
+                            <div id="layer3Filters" class="chart-container"></div>
+                        </div>
+                        <div class="content-card">
+                            <h4>Layer 4 Filters (Objects)</h4>
+                            <div id="layer4Filters" class="chart-container"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="controls">
+                        <button class="btn" onclick="generateRandomFilters()">Generate New Filters</button>
+                        <button class="btn" onclick="animateFeatureExtraction()">Animate Feature Extraction</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="cnn-demo" class="tab-content">
+                <div class="interactive-demo">
+                    <h3>🎨 CNN Image Classification Demo</h3>
+                    <p>Upload an image and see how a CNN processes it layer by layer!</p>
+                    
+                    <div class="content-grid">
+                        <div class="content-card">
+                            <h4>Input Image</h4>
+                            <canvas id="uploadCanvas" width="224" height="224" style="background: rgba(255,255,255,0.1); border-radius: 10px;"></canvas>
+                            <input type="file" id="imageUpload" accept="image/*" onchange="loadImage()" style="margin: 1rem 0;">
+                            <br>
+                            <button class="btn" onclick="loadSampleImage('cat')">Load Cat</button>
+                            <button class="btn" onclick="loadSampleImage('dog')">Load Dog</button>
+                        </div>
+                        
+                        <div class="content-card">
+                            <h4>Feature Maps</h4>
+                            <div id="featureMapsViz" style="height: 300px; overflow-y: auto;"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="content-grid">
+                        <div class="content-card">
+                            <h4>Predictions</h4>
+                            <div id="predictions"></div>
+                        </div>
+                        
+                        <div class="content-card">
+                            <h4>Layer Information</h4>
+                            <div id="layerInfo"></div>
+                        </div>
+                    </div>
+                    
+                    <button class="btn" onclick="processCNN()">Process with CNN</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- RNN Section -->
+        <div id="rnn" class="section">
+            <h2>🔄 RNNs & LSTMs</h2>
+            
+            <div class="highlight-box">
+                <h3>Memory in neural networks!</h3>
+                <p>RNNs process sequences by maintaining hidden states that carry information across time steps. LSTMs solve the vanishing gradient problem with sophisticated gating mechanisms.</p>
+            </div>
+
+            <div class="tabs">
+                <div class="tab active" onclick="showTab('rnn', 'basics')">RNN Basics</div>
+                <div class="tab" onclick="showTab('rnn', 'lstm')">LSTM Deep Dive</div>
+                <div class="tab" onclick="showTab('rnn', 'applications')">Applications</div>
+                <div class="tab" onclick="showTab('rnn', 'demo')">Sequence Demo</div>
+            </div>
+
+            <div id="rnn-basics" class="tab-content active">
+                <div class="content-grid">
+                    <div class="content-card">
+                        <h3>🔄 Recurrent Neural Networks</h3>
+                        <p>RNNs process sequences by using hidden states that get updated at each time step.</p>
+                        
+                        <div class="math-equation">
+                            $$h_t = \tanh(W_{hh}h_{t-1} + W_{xh}x_t + b_h)$$
+                            $$y_t = W_{hy}h_t + b_y$$
+                        </div>
+                        
+                        <div class="formula-explanation">
+                            $h_t$ = hidden state at time $t$<br>
+                            $x_t$ = input at time $t$<br>
+                            $y_t$ = output at time $t$
+                        </div>
+
+                        <h4>Key Concepts:</h4>
+                        <ul>
+                            <li><strong>Hidden State:</strong> Memory of previous inputs</li>
+                            <li><strong>Parameter Sharing:</strong> Same weights across time</li>
+                            <li><strong>Variable Length:</strong> Handle sequences of any length</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="content-card">
+                        <h3>⚠️ RNN Challenges</h3>
+                        
+                        <h4>1. Vanishing Gradients</h4>
+                        <div class="math-equation">
+                            $$\frac{\partial L}{\partial h_1} = \frac{\partial L}{\partial h_T} \prod_{t=2}^{T} \frac{\partial h_t}{\partial h_{t-1}}$$
+                        </div>
+                        
+                        <div class="formula-explanation">
+                            Gradients diminish exponentially through time
+                        </div>
+
+                        <h4>2. Exploding Gradients</h4>
+                        <p>Gradients can also grow exponentially, causing unstable training</p>
+
+                        <h4>3. Long-term Dependencies</h4>
+                        <p>Difficulty remembering information from distant past</p>
+                    </div>
+                </div>
+
+                <div class="interactive-demo">
+                    <h3>🎯 RNN Unfolding Visualization</h3>
+                    <div id="rnnUnfoldViz" class="network-canvas"></div>
+                    
+                    <div class="controls">
+                        <div class="control-group">
+                            <label>Time Steps</label>
+                            <input type="range" class="slider" id="timeSteps" min="3" max="8" value="5" onchange="updateRNNUnfold()">
+                            <span id="timeStepCount">5</span>
+                        </div>
+                        <div class="control-group">
+                            <label>Hidden Size</label>
+                            <input type="range" class="slider" id="hiddenSize" min="2" max="6" value="4" onchange="updateRNNUnfold()">
+                            <span id="hiddenSizeCount">4</span>
+                        </div>
+                    </div>
+                    
+                    <button class="btn" onclick="animateRNNForward()">Animate Forward Pass</button>
+                    <button class="btn" onclick="animateRNNBackward()">Animate Backprop</button>
+                </div>
+            </div>
+
+            <div id="rnn-lstm" class="tab-content">
+                <div class="content-grid">
+                    <div class="content-card">
+                        <h3>🧠 LSTM Architecture</h3>
+                        <p>Long Short-Term Memory networks solve the vanishing gradient problem through gating mechanisms.</p>
+                        
+                        <h4>Forget Gate:</h4>
+                        <div class="math-equation">
+                            $$f_t = \sigma(W_f \cdot [h_{t-1}, x_t] + b_f)$$
+                        </div>
+                        
+                        <h4>Input Gate:</h4>
+                        <div class="math-equation">
+                            $$i_t = \sigma(W_i \cdot [h_{t-1}, x_t] + b_i)$$
+                            $$\tilde{C}_t = \tanh(W_C \cdot [h_{t-1}, x_t] + b_C)$$
+                        </div>
+                        
+                        <h4>Cell State Update:</h4>
+                        <div class="math-equation">
+                            $$C_t = f_t * C_{t-1} + i_t * \tilde{C}_t$$
+                        </div>
+                    </div>
+                    
+                    <div class="content-card">
+                        <h3>🚪 LSTM Gates</h3>
+                        
+                        <h4>Output Gate:</h4>
+                        <div class="math-equation">
+                            $$o_t = \sigma(W_o \cdot [h_{t-1}, x_t] + b_o)$$
+                            $$h_t = o_t * \tanh(C_t)$$
+                        </div>
+
+                        <h4>Gate Functions:</h4>
+                        <ul>
+                            <li><strong>Forget Gate:</strong> What to remove from cell state</li>
+                            <li><strong>Input Gate:</strong> What new information to store</li>
+                            <li><strong>Output Gate:</strong> What parts of cell state to output</li>
+                        </ul>
+
+                        <div class="formula-explanation">
+                            $\sigma$ = sigmoid function (0 to 1)<br>
+                            $\tanh$ = tanh function (-1 to 1)
+                        </div>
+                    </div>
+                </div>
+
+                <div class="interactive-demo">
+                    <h3>🔍 LSTM Cell Visualization</h3>
+                    <div id="lstmCellViz" class="network-canvas"></div>
+                    
+                    <div class="controls">
+                        <button class="btn" onclick="animateLSTMGates()">Animate Gates</button>
+                        <button class="btn" onclick="showGateValues()">Show Gate Values</button>
+                        <button class="btn" onclick="resetLSTMDemo()">Reset</button>
+                    </div>
+                    
+                    <div class="content-grid">
+                        <div class="content-card">
+                            <h4>Gate Values</h4>
+                            <div id="gateValues"></div>
+                        </div>
+                        <div class="content-card">
+                            <h4>Cell State Evolution</h4>
+                            <div id="cellStateChart" class="chart-container"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="rnn-applications" class="tab-content">
+                <div class="content-grid">
+                    <div class="content-card">
+                        <h3>🎯 RNN/LSTM Applications</h3>
+                        
+                        <h4>1. Language Modeling</h4>
+                        <p>Predict next word in a sequence</p>
+                        <div class="math-equation">
+                            $$P(w_t | w_1, w_2, ..., w_{t-1})$$
+                        </div>
+                        
+                        <h4>2. Machine Translation</h4>
+                        <p>Encoder-Decoder architecture</p>
+                        
+                        <h4>3. Sentiment Analysis</h4>
+                        <p>Classify emotional tone of text</p>
+                        
+                        <h4>4. Time Series Prediction</h4>
+                        <p>Forecast future values based on historical data</p>
+                    </div>
+                    
+                    <div class="content-card">
+                        <h3>🔀 RNN Variants</h3>
+                        
+                        <h4>Bidirectional RNNs</h4>
+                        <div class="math-equation">
+                            $$h_t = [\overrightarrow{h_t}; \overleftarrow{h_t}]$$
+                        </div>
+                        
+                        <h4>GRU (Gated Recurrent Unit)</h4>
+                        <p>Simplified LSTM with fewer parameters</p>
+                        
+                        <h4>Stacked RNNs</h4>
+                        <p>Multiple RNN layers for increased capacity</p>
+                        
+                        <h4>Attention Mechanisms</h4>
+                        <p>Focus on relevant parts of input sequence</p>
+                    </div>
+                </div>
+
+                <div class="visualization">
+                    <h3>RNN Architecture Comparison</h3>
+                    <div id="rnnArchComparison" class="chart-container"></div>
+                </div>
+            </div>
+
+            <div id="rnn-demo" class="tab-content">
+                <div class="interactive-demo">
+                    <h3>📝 Text Generation with RNN</h3>
+                    <p>Train an RNN to generate text character by character!</p>
+                    
+                    <div class="content-grid">
+                        <div class="content-card">
+                            <h4>Training Text</h4>
+                            <textarea id="trainingText" rows="10" style="width: 100%; background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.2); border-radius: 5px; padding: 1rem;">The quick brown fox jumps over the lazy dog. This is a sample text for training our RNN model. Machine learning is fascinating and neural networks are powerful tools for pattern recognition.</textarea>
+                            <div class="controls">
+                                <button class="btn" onclick="trainTextRNN()">Train RNN</button>
+                                <button class="btn" onclick="generateText()">Generate Text</button>
+                            </div>
+                        </div>
+                        
+                        <div class="content-card">
+                            <h4>Generated Text</h4>
+                            <div id="generatedText" style="background: rgba(255,255,255,0.1); padding: 1rem; border-radius: 5px; min-height: 200px; font-family: monospace;"></div>
+                            
+                            <div class="controls">
+                                <div class="control-group">
+                                    <label>Temperature</label>
+                                    <input type="range" class="slider" id="temperature" min="0.1" max="2" step="0.1" value="1">
+                                    <span id="tempValue">1.0</span>
+                                </div>
+                                <div class="control-group">
+                                    <label>Length</label>
+                                    <input type="range" class="slider" id="genLength" min="50" max="500" value="200">
+                                    <span id="lengthValue">200</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="content-grid">
+                        <div class="chart-container" id="rnnTrainingLoss"></div>
+                        <div class="chart-container" id="characterProbabilities"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Transformers Section -->
+        <div id="transformers" class="section">
+            <h2>⚡ Transformers</h2>
+            
+            <div class="highlight-box">
+                <h3>Attention is all you need!</h3>
+                <p>Transformers revolutionized NLP by replacing recurrence with self-attention mechanisms, enabling parallel processing and capturing long-range dependencies effectively.</p>
+            </div>
+
+            <div class="tabs">
+                <div class="tab active" onclick="showTab('transformers', 'attention')">Self-Attention</div>
+                <div class="tab" onclick="showTab('transformers', 'architecture')">Architecture</div>
+                <div class="tab" onclick="showTab('transformers', 'training')">Training</div>
+                <div class="tab" onclick="showTab('transformers', 'demo')">Interactive Demo</div>
+            </div>
+
+            <div id="transformers-attention" class="tab-content active">
+                <div class="content-grid">
+                    <div class="content-card">
+                        <h3>🎯 Self-Attention Mechanism</h3>
+                        <p>The core innovation: each token attends to all other tokens in the sequence.</p>
+                        
+                        <div class="math-equation">
+                            $$\text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)V$$
+                        </div>
+                        
+                        <div class="formula-explanation">
+                            $Q$ = Queries, $K$ = Keys, $V$ = Values<br>
+                            $d_k$ = dimension of key vectors (for scaling)
+                        </div>
+
+                        <h4>Computing Q, K, V:</h4>
+                        <div class="math-equation">
+                            $$Q = XW^Q, \quad K = XW^K, \quad V = XW^V$$
+                        </div>
+                    </div>
+                    
+                    <div class="content-card">
+                        <h3>🔀 Multi-Head Attention</h3>
+                        <p>Multiple attention heads capture different types of relationships.</p>
+                        
+                        <div class="math-equation">
+                            $$\text{MultiHead}(Q,K,V) = \text{Concat}(\text{head}_1, ..., \text{head}_h)W^O$$
+                        </div>
+                        
+                        <div class="math-equation">
+                            $$\text{head}_i = \text{Attention}(QW_i^Q, KW_i^K, VW_i^V)$$
+                        </div>
+
+                        <h4>Benefits:</h4>
+                        <ul>
+                            <li><strong>Parallel Processing:</strong> No sequential dependency</li>
+                            <li><strong>Long-range Dependencies:</strong> Direct connections between distant tokens</li>
+                            <li><strong>Interpretability:</strong> Attention weights show relationships</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="interactive-demo">
+                    <h3>🔍 Attention Visualization</h3>
+                    <div class="content-grid">
+                        <div class="content-card">
+                            <h4>Input Sequence</h4>
+                            <input type="text" id="attentionInput" value="The cat sat on the mat" 
+                                   style="width: 100%; background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.2); border-radius: 5px; padding: 1rem;">
+                            <button class="btn" onclick="computeAttention()">Compute Attention</button>
+                        </div>
+                        <div class="content-card">
+                            <h4>Attention Matrix</h4>
+                            <div id="attentionMatrix" class="chart-container"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="controls">
+                        <div class="control-group">
+                            <label>Head Number</label>
+                            <input type="range" class="slider" id="attentionHead" min="1" max="8" value="1" onchange="updateAttentionHead()">
+                            <span id="headNumber">1</span>
+                        </div>
+                        <div class="control-group">
+                            <label>Layer</label>
+                            <input type="range" class="slider" id="attentionLayer" min="1" max="6" value="1" onchange="updateAttentionLayer()">
+                            <span id="layerNumber">1</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="transformers-architecture" class="tab-content">
+                <div class="content-grid">
+                    <div class="content-card">
+                        <h3>🏗️ Transformer Architecture</h3>
+                        
+                        <h4>Encoder Block:</h4>
+                        <ol>
+                            <li>Multi-Head Self-Attention</li>
+                            <li>Add & Norm (Residual Connection + Layer Norm)</li>
+                            <li>Feed-Forward Network</li>
+                            <li>Add & Norm</li>
+                        </ol>
+
+                        <h4>Decoder Block:</h4>
+                        <ol>
+                            <li>Masked Multi-Head Self-Attention</li>
+                            <li>Add & Norm</li>
+                            <li>Multi-Head Cross-Attention</li>
+                            <li>Add & Norm</li>
+                            <li>Feed-Forward Network</li>
+                            <li>Add & Norm</li>
+                        </ol>
+                    </div>
+                    
+                    <div class="content-card">
+                        <h3>🔧 Key Components</h3>
+                        
+                        <h4>Positional Encoding:</h4>
+                        <div class="math-equation">
+                            $$PE_{(pos, 2i)} = \sin\left(\frac{pos}{10000^{2i/d_{model}}}\right)$$
+                            $$PE_{(pos, 2i+1)} = \cos\left(\frac{pos}{10000^{2i/d_{model}}}\right)$$
+                        </div>
+                        
+                        <h4>Layer Normalization:</h4>
+                        <div class="math-equation">
+                            $$\text{LayerNorm}(x) = \gamma \frac{x - \mu}{\sigma} + \beta$$
+                        </div>
+                        
+                        <h4>Feed-Forward Network:</h4>
+                        <div class="math-equation">
+                            $$\text{FFN}(x) = \max(0, xW_1 + b_1)W_2 + b_2$$
+                        </div>
+                    </div>
+                </div>
+
+                <div class="visualization">
+                    <h3>Transformer Architecture Diagram</h3>
+                    <div id="transformerArchViz" class="network-canvas"></div>
+                    
+                    <div class="controls">
+                        <button class="btn" onclick="animateTransformerFlow()">Animate Data Flow</button>
+                        <button class="btn" onclick="highlightAttention()">Highlight Attention</button>
+                        <button class="btn" onclick="showEncoderDecoder()">Show Encoder-Decoder</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="transformers-training" class="tab-content">
+                <div class="content-grid">
+                    <div class="content-card">
+                        <h3>🎓 Training Strategies</h3>
+                        
+                        <h4>1. Teacher Forcing</h4>
+                        <p>During training, use ground truth as decoder input</p>
+                        
+                        <h4>2. Masked Language Modeling (BERT)</h4>
+                        <div class="math-equation">
+                            $$L = -\sum_{i \in \text{masked}} \log P(w_i | \text{context})$$
+                        </div>
+                        
+                        <h4>3. Autoregressive Generation (GPT)</h4>
+                        <div class="math-equation">
+                            $$L = -\sum_{t=1}^{T} \log P(w_t | w_1, ..., w_{t-1})$$
+                        </div>
+                        
+                        <h4>4. Sequence-to-Sequence</h4>
+                        <p>Encoder-decoder for translation tasks</p>
+                    </div>
+                    
+                    <div class="content-card">
+                        <h3>⚙️ Training Techniques</h3>
+                        
+                        <h4>Learning Rate Scheduling:</h4>
+                        <div class="math-equation">
+                            $$lr = d_{model}^{-0.5} \cdot \min(step^{-0.5}, step \cdot warmup^{-1.5})$$
+                        </div>
+                        
+                        <h4>Gradient Clipping:</h4>
+                        <p>Prevent exploding gradients</p>
+                        
+                        <h4>Dropout & Label Smoothing:</h4>
+                        <p>Regularization techniques for better generalization</p>
+                        
+                        <h4>Mixed Precision Training:</h4>
+                        <p>Use FP16 for faster training with large models</p>
+                    </div>
+                </div>
+
+                <div class="interactive-demo">
+                    <h3>📊 Training Dynamics</h3>
+                    <div class="content-grid">
+                        <div class="chart-container" id="transformerLoss"></div>
+                        <div class="chart-container" id="learningRateSchedule"></div>
+                    </div>
+                    
+                    <div class="content-grid">
+                        <div class="chart-container" id="attentionEvolution"></div>
+                        <div class="chart-container" id="gradientNorms"></div>
+                    </div>
+                    
+                    <div class="controls">
+                        <button class="btn" onclick="simulateTraining()">Simulate Training</button>
+                        <button class="btn" onclick="showWarmupSchedule()">Show Warmup</button>
+                        <button class="btn" onclick="resetTrainingViz()">Reset</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="transformers-demo" class="tab-content">
+                <div class="interactive-demo">
+                    <h3>🤖 Transformer Language Model Demo</h3>
+                    <p>Experience how Transformers generate text autoregressively!</p>
+                    
+                    <div class="content-grid">
+                        <div class="content-card">
+                            <h4>Text Generation</h4>
+                            <textarea id="promptInput" rows="3" placeholder="Enter your prompt here..." 
+                                     style="width: 100%; background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.2); border-radius: 5px; padding: 1rem;">Once upon a time in a distant galaxy</textarea>
+                            
+                            <div class="controls">
+                                <div class="control-group">
+                                    <label>Max Length</label>
+                                    <input type="range" class="slider" id="maxLength" min="50" max="300" value="150">
+                                    <span id="maxLenValue">150</span>
+                                </div>
+                                <div class="control-group">
+                                    <label>Temperature</label>
+                                    <input type="range" class="slider" id="genTemperature" min="0.1" max="2" step="0.1" value="0.8">
+                                    <span id="genTempValue">0.8</span>
+                                </div>
+                            </div>
+                            
+                            <button class="btn" onclick="generateTransformerText()">Generate Text</button>
+                        </div>
+                        
+                        <div class="content-card">
+                            <h4>Generated Output</h4>
+                            <div id="transformerOutput" style="background: rgba(255,255,255,0.1); padding: 1rem; border-radius: 5px; min-height: 200px; font-family: monospace; white-space: pre-wrap;"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="content-grid">
+                        <div class="content-card">
+                            <h4>Token Probabilities</h4>
+                            <div id="tokenProbabilities" class="chart-container"></div>
+                        </div>
+                        
+                        <div class="content-card">
+                            <h4>Attention Patterns</h4>
+                            <div id="generationAttention" class="chart-container"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="animation-controls">
+                        <button class="btn" onclick="stepByStepGeneration()">Step-by-Step Generation</button>
+                        <button class="btn" onclick="showAttentionFlow()">Show Attention Flow</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let currentSection = 'basics';
+        let animationRunning = false;
+        let trainingData = [];
+
+        // Navigation functions
+        function showSection(sectionId) {
+            // Hide all sections
+            document.querySelectorAll('.section').forEach(section => {
+                section.classList.remove('active');
+            });
+            
+            // Show selected section
+            document.getElementById(sectionId).classList.add('active');
+            
+            // Update nav buttons
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            currentSection = sectionId;
+            
+            // Initialize section-specific content
+            initializeSection(sectionId);
+        }
+
+        function showTab(section, tabId) {
+            // Hide all tab contents for this section
+            document.querySelectorAll(`#${section} .tab-content`).forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // Show selected tab content
+            document.getElementById(`${section}-${tabId}`).classList.add('active');
+            
+            // Update tab buttons
+            document.querySelectorAll(`#${section} .tab`).forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Initialize tab-specific content
+            initializeTab(section, tabId);
+        }
+
+        function initializeSection(sectionId) {
+            switch(sectionId) {
+                case 'basics':
+                    initializeBasicNetwork();
+                    createActivationChart();
+                    break;
+                case 'cnn':
+                    initializeCNNDemo();
+                    break;
+                case 'rnn':
+                    initializeRNNDemo();
+                    break;
+                case 'transformers':
+                    initializeTransformerDemo();
+                    break;
+            }
+        }
+
+        function initializeTab(section, tabId) {
+            if (section === 'basics' && tabId === 'demo') {
+                initializePlayground();
+            } else if (section === 'cnn' && tabId === 'convolution') {
+                initializeConvolutionDemo();
+            } else if (section === 'rnn' && tabId === 'lstm') {
+                initializeLSTMVisualization();
+            } else if (section === 'transformers' && tabId === 'attention') {
+                initializeAttentionDemo();
+            }
+        }
+
+        // Basic Neural Network Functions
+        function initializeBasicNetwork() {
+            const svg = d3.select('#basicNetworkViz')
+                .html('')
+                .append('svg')
+                .attr('width', '100%')
+                .attr('height', '100%')
+                .attr('viewBox', '0 0 600 300');
+
+            drawBasicNetwork(svg);
+        }
+
+        function drawBasicNetwork(svg) {
+            const layers = [
+                { neurons: 3, x: 100, label: 'Input' },
+                { neurons: 4, x: 300, label: 'Hidden' },
+                { neurons: 2, x: 500, label: 'Output' }
+            ];
+
+            // Draw connections
+            layers.forEach((layer, i) => {
+                if (i < layers.length - 1) {
+                    const nextLayer = layers[i + 1];
+                    for (let j = 0; j < layer.neurons; j++) {
+                        for (let k = 0; k < nextLayer.neurons; k++) {
+                            const y1 = 50 + (j * (200 / (layer.neurons - 1)));
+                            const y2 = 50 + (k * (200 / (nextLayer.neurons - 1)));
+                            
+                            svg.append('line')
+                                .attr('class', 'connection')
+                                .attr('x1', layer.x + 20)
+                                .attr('y1', y1)
+                                .attr('x2', nextLayer.x - 20)
+                                .attr('y2', y2)
+                                .style('stroke', 'rgba(255,255,255,0.3)')
+                                .style('stroke-width', 1);
+                        }
+                    }
+                }
+            });
+
+            // Draw neurons
+            layers.forEach(layer => {
+                for (let i = 0; i < layer.neurons; i++) {
+                    const y = 50 + (i * (200 / (layer.neurons - 1)));
+                    
+                    svg.append('circle')
+                        .attr('class', 'neuron')
+                        .attr('cx', layer.x)
+                        .attr('cy', y)
+                        .attr('r', 12)
+                        .style('fill', '#4ecdc4')
+                        .style('stroke', '#fff')
+                        .style('stroke-width', 2);
+                }
+            });
+
+            // Draw labels
+            layers.forEach(layer => {
+                svg.append('text')
+                    .attr('class', 'layer-label')
+                    .attr('x', layer.x)
+                    .attr('y', 280)
+                    .text(layer.label)
+                    .style('text-anchor', 'middle')
+                    .style('fill', '#4ecdc4')
+                    .style('font-weight', 'bold');
+            });
+        }
+
+        function updateBasicNetwork() {
+            const hiddenNeurons = document.getElementById('hiddenNeurons').value;
+            document.getElementById('hiddenCount').textContent = hiddenNeurons;
+            
+            // Redraw network with new hidden layer size
+            initializeBasicNetwork();
+        }
+
+        function updateLearningRate() {
+            const lr = document.getElementById('learningRate').value;
+            document.getElementById('lrValue').textContent = lr;
+        }
+
+        function createActivationChart() {
+            const x = [];
+            const relu = [];
+            const sigmoid = [];
+            const tanh = [];
+
+            for (let i = -5; i <= 5; i += 0.1) {
+                x.push(i);
+                relu.push(Math.max(0, i));
+                sigmoid.push(1 / (1 + Math.exp(-i)));
+                tanh.push(Math.tanh(i));
+            }
+
+            const data = [
+                {
+                    x: x,
+                    y: relu,
+                    name: 'ReLU',
+                    type: 'scatter',
+                    line: { color: '#ff6b6b' }
+                },
+                {
+                    x: x,
+                    y: sigmoid,
+                    name: 'Sigmoid',
+                    type: 'scatter',
+                    line: { color: '#4ecdc4' }
+                },
+                {
+                    x: x,
+                    y: tanh,
+                    name: 'Tanh',
+                    type: 'scatter',
+                    line: { color: '#45b7d1' }
+                }
+            ];
+
+            const layout = {
+                title: 'Activation Functions',
+                xaxis: { title: 'Input' },
+                yaxis: { title: 'Output' },
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                font: { color: 'white' }
+            };
+
+            Plotly.newPlot('activationChart', data, layout, { responsive: true });
+        }
+
+        // Training simulation
+        function startTraining() {
+            if (animationRunning) return;
+            animationRunning = true;
+            
+            simulateTrainingProcess();
+        }
+
+        function pauseTraining() {
+            animationRunning = false;
+        }
+
+        function resetTraining() {
+            animationRunning = false;
+            document.getElementById('trainingProgress').style.width = '0%';
+            createLossChart([]);
+        }
+
+        function simulateTrainingProcess() {
+            const epochs = document.getElementById('epochs').value;
+            const batchSize = document.getElementById('batchSize').value;
+            document.getElementById('batchValue').textContent = batchSize;
+            document.getElementById('epochValue').textContent = epochs;
+            
+            let currentEpoch = 0;
+            const lossData = [];
+            
+            const interval = setInterval(() => {
+                if (!animationRunning || currentEpoch >= epochs) {
+                    clearInterval(interval);
+                    animationRunning = false;
+                    return;
+                }
+                
+                // Simulate loss decrease with noise
+                const loss = 2 * Math.exp(-currentEpoch / 30) + 0.1 * Math.random();
+                lossData.push({ epoch: currentEpoch, loss: loss });
+                
+                // Update progress
+                const progress = (currentEpoch / epochs) * 100;
+                document.getElementById('trainingProgress').style.width = progress + '%';
+                
+                // Update charts
+                createLossChart(lossData);
+                updateFunctionApproximation(currentEpoch / epochs);
+                
+                currentEpoch++;
+            }, 50);
+        }
+
+        function createLossChart(data) {
+            const plotData = [{
+                x: data.map(d => d.epoch),
+                y: data.map(d => d.loss),
+                type: 'scatter',
+                mode: 'lines',
+                line: { color: '#ff6b6b' },
+                name: 'Training Loss'
+            }];
+
+            const layout = {
+                title: 'Training Loss',
+                xaxis: { title: 'Epoch' },
+                yaxis: { title: 'Loss' },
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                font: { color: 'white' }
+            };
+
+            Plotly.newPlot('lossChart', plotData, layout, { responsive: true });
+        }
+
+        function updateFunctionApproximation(progress) {
+            const x = [];
+            const target = [];
+            const prediction = [];
+
+            for (let i = -2; i <= 2; i += 0.1) {
+                x.push(i);
+                target.push(Math.sin(i * 2));
+                
+                // Simulate improving approximation
+                const noise = (1 - progress) * 0.5 * (Math.random() - 0.5);
+                prediction.push(Math.sin(i * 2) + noise);
+            }
+
+            const data = [
+                {
+                    x: x,
+                    y: target,
+                    name: 'Target Function',
+                    type: 'scatter',
+                    line: { color: '#4ecdc4' }
+                },
+                {
+                    x: x,
+                    y: prediction,
+                    name: 'Neural Network',
+                    type: 'scatter',
+                    line: { color: '#ff6b6b', dash: 'dash' }
+                }
+            ];
+
+            const layout = {
+                title: 'Function Approximation',
+                xaxis: { title: 'Input' },
+                yaxis: { title: 'Output' },
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                font: { color: 'white' }
+            };
+
+            Plotly.newPlot('functionApprox', data, layout, { responsive: true });
+        }
+
+        // Interactive Playground
+        function initializePlayground() {
+            const canvas = document.getElementById('dataCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            canvas.addEventListener('click', addDataPoint);
+            clearDataset();
+        }
+
+        function addDataPoint(event) {
+            const canvas = event.target;
+            const rect = canvas.getBoundingClientRect();
+            const x = (event.clientX - rect.left) / canvas.width;
+            const y = (event.clientY - rect.top) / canvas.height;
+            
+            // Alternate between classes
+            const class_id = trainingData.length % 2;
+            trainingData.push({ x: x, y: y, class: class_id });
+            
+            drawDataset();
+        }
+
+        function drawDataset() {
+            const canvas = document.getElementById('dataCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            trainingData.forEach(point => {
+                ctx.beginPath();
+                ctx.arc(point.x * canvas.width, point.y * canvas.height, 5, 0, 2 * Math.PI);
+                ctx.fillStyle = point.class === 0 ? '#ff6b6b' : '#4ecdc4';
+                ctx.fill();
+            });
+        }
+
+        function clearDataset() {
+            trainingData = [];
+            drawDataset();
+        }
+
+        function generateSpiral() {
+            trainingData = [];
+            const n = 50;
+            
+            for (let i = 0; i < n; i++) {
+                for (let c = 0; c < 2; c++) {
+                    const r = i / n * 0.3;
+                    const t = 1.75 * i / n * 2 * Math.PI + c * Math.PI;
+                    const x = 0.5 + r * Math.cos(t);
+                    const y = 0.5 + r * Math.sin(t);
+                    
+                    if (x >= 0 && x <= 1 && y >= 0 && y <= 1) {
+                        trainingData.push({ x: x, y: y, class: c });
+                    }
+                }
+            }
+            
+            drawDataset();
+        }
+
+        function generateCircles() {
+            trainingData = [];
+            const n = 100;
+            
+            for (let i = 0; i < n; i++) {
+                const angle = Math.random() * 2 * Math.PI;
+                const radius = Math.random() * 0.3 + 0.1;
+                const class_id = radius > 0.25 ? 1 : 0;
+                
+                const x = 0.5 + radius * Math.cos(angle);
+                const y = 0.5 + radius * Math.sin(angle);
+                
+                trainingData.push({ x: x, y: y, class: class_id });
+            }
+            
+            drawDataset();
+        }
+
+        function trainOnData() {
+            if (trainingData.length < 4) {
+                document.getElementById('trainStatus').innerHTML = 
+                    '<span style="color: #ff6b6b;">Please add more data points (at least 4)</span>';
+                return;
+            }
+            
+            document.getElementById('trainStatus').innerHTML = 
+                '<span style="color: #4ecdc4;">Training... (simulated)</span>';
+            
+            // Simulate training process
+            setTimeout(() => {
+                document.getElementById('trainStatus').innerHTML = 
+                    '<span style="color: #4ecdc4;">Training complete! Accuracy: 95.2%</span>';
+                drawDecisionBoundary();
+            }, 2000);
+        }
+
+        function drawDecisionBoundary() {
+            const canvas = document.getElementById('dataCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Draw a simple decision boundary (simulated)
+            ctx.beginPath();
+            ctx.setLineDash([5, 5]);
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+            ctx.lineWidth = 2;
+            ctx.moveTo(0, canvas.height * 0.3);
+            ctx.quadraticCurveTo(canvas.width * 0.5, canvas.height * 0.7, canvas.width, canvas.height * 0.4);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
+            // Redraw data points on top
+            drawDataset();
+        }
+
+        // CNN Functions
+        function initializeCNNDemo() {
+            initializeConvolutionDemo();
+        }
+
+        function initializeConvolutionDemo() {
+            drawInputImage();
+            updateConvolution();
+        }
+
+        function drawInputImage() {
+            const canvas = document.getElementById('inputImage');
+            const ctx = canvas.getContext('2d');
+            
+            // Create a simple test image
+            const imageData = ctx.createImageData(canvas.width, canvas.height);
+            
+            for (let i = 0; i < imageData.data.length; i += 4) {
+                const x = (i / 4) % canvas.width;
+                const y = Math.floor((i / 4) / canvas.width);
+                
+                // Create stripes pattern
+                const intensity = (x + y) % 40 < 20 ? 255 : 100;
+                
+                imageData.data[i] = intensity;     // R
+                imageData.data[i + 1] = intensity; // G
+                imageData.data[i + 2] = intensity; // B
+                imageData.data[i + 3] = 255;       // A
+            }
+            
+            ctx.putImageData(imageData, 0, 0);
+        }
+
+        function updateConvolution() {
+            const filterType = document.getElementById('filterType').value;
+            const stride = document.getElementById('stride').value;
+            const padding = document.getElementById('padding').value;
+            
+            document.getElementById('strideValue').textContent = stride;
+            document.getElementById('paddingValue').textContent = padding;
+            
+            drawFilter(filterType);
+            computeFeatureMap(filterType, stride, padding);
+        }
+
+        function drawFilter(filterType) {
+            const canvas = document.getElementById('filterKernel');
+            const ctx = canvas.getContext('2d');
+            
+            const filters = {
+                edge: [[-1, -1, -1], [-1, 8, -1], [-1, -1, -1]],
+                blur: [[1/9, 1/9, 1/9], [1/9, 1/9, 1/9], [1/9, 1/9, 1/9]],
+                sharpen: [[0, -1, 0], [-1, 5, -1], [0, -1, 0]],
+                emboss: [[-2, -1, 0], [-1, 1, 1], [0, 1, 2]]
+            };
+            
+            const filter = filters[filterType];
+            const cellSize = canvas.width / 3;
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            for (let i = 0; i < 3; i++) {
+                for (let j = 0; j < 3; j++) {
+                    const value = filter[i][j];
+                    const intensity = Math.abs(value) * 50 + 100;
+                    const color = value >= 0 ? `rgb(${intensity}, ${intensity}, 255)` : `rgb(255, ${intensity}, ${intensity})`;
+                    
+                    ctx.fillStyle = color;
+                    ctx.fillRect(j * cellSize, i * cellSize, cellSize, cellSize);
+                    
+                    ctx.fillStyle = 'white';
+                    ctx.font = '12px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(value.toFixed(1), (j + 0.5) * cellSize, (i + 0.7) * cellSize);
+                }
+            }
+        }
+
+        function computeFeatureMap(filterType, stride, padding) {
+            const canvas = document.getElementById('featureMap');
+            const ctx = canvas.getContext('2d');
+            
+            // Simulate convolution result
+            const imageData = ctx.createImageData(canvas.width, canvas.height);
+            
+            for (let i = 0; i < imageData.data.length; i += 4) {
+                const x = (i / 4) % canvas.width;
+                const y = Math.floor((i / 4) / canvas.width);
+                
+                let intensity;
+                switch(filterType) {
+                    case 'edge':
+                        intensity = Math.abs(x - y) % 50 + 100;
+                        break;
+                    case 'blur':
+                        intensity = 150 + 20 * Math.sin(x / 20) * Math.cos(y / 20);
+                        break;
+                    case 'sharpen':
+                        intensity = ((x + y) % 20 < 10 ? 255 : 50);
+                        break;
+                    case 'emboss':
+                        intensity = Math.min(255, x + y);
+                        break;
+                    default:
+                        intensity = 128;
+                }
+                
+                imageData.data[i] = intensity;
+                imageData.data[i + 1] = intensity;
+                imageData.data[i + 2] = intensity;
+                imageData.data[i + 3] = 255;
+            }
+            
+            ctx.putImageData(imageData, 0, 0);
+        }
+
+        function animateConvolution() {
+            // Add animation effect
+            document.getElementById('featureMap').style.animation = 'pulse 2s infinite';
+            setTimeout(() => {
+                document.getElementById('featureMap').style.animation = '';
+            }, 4000);
+        }
+
+        // RNN Functions
+        function initializeRNNDemo() {
+            initializeRNNUnfold();
+        }
+
+        function initializeRNNUnfold() {
+            const svg = d3.select('#rnnUnfoldViz')
+                .html('')
+                .append('svg')
+                .attr('width', '100%')
+                .attr('height', '100%')
+                .attr('viewBox', '0 0 800 300');
+
+            drawRNNUnfolded(svg);
+        }
+
+        function drawRNNUnfolded(svg) {
+            const timeSteps = document.getElementById('timeSteps').value;
+            const hiddenSize = document.getElementById('hiddenSize').value;
+            document.getElementById('timeStepCount').textContent = timeSteps;
+            document.getElementById('hiddenSizeCount').textContent = hiddenSize;
+            
+            const stepWidth = 700 / timeSteps;
+            
+            // Draw time steps
+            for (let t = 0; t < timeSteps; t++) {
+                const x = 50 + t * stepWidth;
+                
+                // Input
+                svg.append('circle')
+                    .attr('cx', x)
+                    .attr('cy', 50)
+                    .attr('r', 8)
+                    .style('fill', '#45b7d1');
+                
+                svg.append('text')
+                    .attr('x', x)
+                    .attr('y', 35)
+                    .attr('text-anchor', 'middle')
+                    .style('fill', 'white')
+                    .style('font-size', '12px')
+                    .text(`x${t}`);
+                
+                // Hidden state
+                svg.append('rect')
+                    .attr('x', x - 20)
+                    .attr('y', 120)
+                    .attr('width', 40)
+                    .attr('height', 60)
+                    .attr('rx', 5)
+                    .style('fill', '#4ecdc4')
+                    .style('stroke', 'white')
+                    .style('stroke-width', 2);
+                
+                svg.append('text')
+                    .attr('x', x)
+                    .attr('y', 155)
+                    .attr('text-anchor', 'middle')
+                    .style('fill', 'white')
+                    .style('font-weight', 'bold')
+                    .text(`h${t}`);
+                
+                // Output
+                svg.append('circle')
+                    .attr('cx', x)
+                    .attr('cy', 250)
+                    .attr('r', 8)
+                    .style('fill', '#ff6b6b');
+                
+                svg.append('text')
+                    .attr('x', x)
+                    .attr('y', 275)
+                    .attr('text-anchor', 'middle')
+                    .style('fill', 'white')
+                    .style('font-size', '12px')
+                    .text(`y${t}`);
+                
+                // Connections
+                // Input to hidden
+                svg.append('line')
+                    .attr('x1', x)
+                    .attr('y1', 65)
+                    .attr('x2', x)
+                    .attr('y2', 115)
+                    .style('stroke', 'white')
+                    .style('stroke-width', 2)
+                    .attr('marker-end', 'url(#arrowhead)');
+                
+                // Hidden to output
+                svg.append('line')
+                    .attr('x1', x)
+                    .attr('y1', 185)
+                    .attr('x2', x)
+                    .attr('y2', 235)
+                    .style('stroke', 'white')
+                    .style('stroke-width', 2)
+                    .attr('marker-end', 'url(#arrowhead)');
+                
+                // Hidden to hidden (recurrent connection)
+                if (t < timeSteps - 1) {
+                    svg.append('line')
+                        .attr('x1', x + 20)
+                        .attr('y1', 150)
+                        .attr('x2', x + stepWidth - 20)
+                        .attr('y2', 150)
+                        .style('stroke', '#ff6b6b')
+                        .style('stroke-width', 3)
+                        .attr('marker-end', 'url(#arrowhead)');
+                }
+            }
+            
+            // Define arrow marker
+            svg.append('defs').append('marker')
+                .attr('id', 'arrowhead')
+                .attr('viewBox', '-0 -5 10 10')
+                .attr('refX', 5)
+                .attr('refY', 0)
+                .attr('orient', 'auto')
+                .attr('markerWidth', 5)
+                .attr('markerHeight', 5)
+                .append('path')
+                .attr('d', 'M 0,-5 L 10 ,0 L 0,5')
+                .style('fill', 'white');
+        }
+
+        function updateRNNUnfold() {
+            initializeRNNUnfold();
+        }
+
+        function animateRNNForward() {
+            const timeSteps = document.getElementById('timeSteps').value;
+            let currentStep = 0;
+            
+            const interval = setInterval(() => {
+                if (currentStep >= timeSteps) {
+                    clearInterval(interval);
+                    return;
+                }
+                
+                // Highlight current time step
+                d3.select('#rnnUnfoldViz svg')
+                    .selectAll('rect')
+                    .style('fill', (d, i) => i === currentStep ? '#ff6b6b' : '#4ecdc4');
+                
+                currentStep++;
+            }, 1000);
+        }
+
+        function animateRNNBackward() {
+            const timeSteps = document.getElementById('timeSteps').value;
+            let currentStep = timeSteps - 1;
+            
+            const interval = setInterval(() => {
+                if (currentStep < 0) {
+                    clearInterval(interval);
+                    return;
+                }
+                
+                // Highlight current time step
+                d3.select('#rnnUnfoldViz svg')
+                    .selectAll('rect')
+                    .style('fill', (d, i) => i === currentStep ? '#45b7d1' : '#4ecdc4');
+                
+                currentStep--;
+            }, 1000);
+        }
+
+        // LSTM Functions
+        function initializeLSTMVisualization() {
+            drawLSTMCell();
+        }
+
+        function drawLSTMCell() {
+            const svg = d3.select('#lstmCellViz')
+                .html('')
+                .append('svg')
+                .attr('width', '100%')
+                .attr('height', '100%')
+                .attr('viewBox', '0 0 600 400');
+
+            // Cell state line
+            svg.append('line')
+                .attr('x1', 50)
+                .attr('y1', 100)
+                .attr('x2', 550)
+                .attr('y2', 100)
+                .style('stroke', '#4ecdc4')
+                .style('stroke-width', 8);
+
+            // Gates
+            const gates = [
+                { x: 150, y: 200, name: 'Forget', color: '#ff6b6b' },
+                { x: 250, y: 200, name: 'Input', color: '#45b7d1' },
+                { x: 350, y: 200, name: 'Update', color: '#feca57' },
+                { x: 450, y: 200, name: 'Output', color: '#ff9ff3' }
+            ];
+
+            gates.forEach(gate => {
+                // Gate circle
+                svg.append('circle')
+                    .attr('cx', gate.x)
+                    .attr('cy', gate.y)
+                    .attr('r', 25)
+                    .style('fill', gate.color)
+                    .style('stroke', 'white')
+                    .style('stroke-width', 2);
+
+                // Gate label
+                svg.append('text')
+                    .attr('x', gate.x)
+                    .attr('y', gate.y + 5)
+                    .attr('text-anchor', 'middle')
+                    .style('fill', 'white')
+                    .style('font-weight', 'bold')
+                    .style('font-size', '12px')
+                    .text(gate.name);
+
+                // Connection to cell state
+                svg.append('line')
+                    .attr('x1', gate.x)
+                    .attr('y1', gate.y - 25)
+                    .attr('x2', gate.x)
+                    .attr('y2', 100)
+                    .style('stroke', gate.color)
+                    .style('stroke-width', 3);
+            });
+
+            // Input connections
+            svg.append('line')
+                .attr('x1', 50)
+                .attr('y1', 350)
+                .attr('x2', 300)
+                .attr('y2', 350)
+                .style('stroke', 'white')
+                .style('stroke-width', 2);
+
+            svg.append('text')
+                .attr('x', 50)
+                .attr('y', 370)
+                .style('fill', 'white')
+                .text('x_t, h_{t-1}');
+
+            // Output
+            svg.append('line')
+                .attr('x1', 450)
+                .attr('y1', 175)
+                .attr('x2', 550)
+                .attr('y2', 50)
+                .style('stroke', 'white')
+                .style('stroke-width', 2);
+
+            svg.append('text')
+                .attr('x', 560)
+                .attr('y', 50)
+                .style('fill', 'white')
+                .text('h_t');
+        }
+
+        function animateLSTMGates() {
+            const gates = d3.selectAll('#lstmCellViz circle');
+            gates.transition()
+                .duration(1000)
+                .attr('r', 35)
+                .transition()
+                .duration(1000)
+                .attr('r', 25);
+        }
+
+        function showGateValues() {
+            const gateData = [
+                { name: 'Forget', value: 0.3 },
+                { name: 'Input', value: 0.8 },
+                { name: 'Update', value: 0.6 },
+                { name: 'Output', value: 0.7 }
+            ];
+
+            let html = '<h4>Current Gate Values:</h4>';
+            gateData.forEach(gate => {
+                html += `<p><strong>${gate.name} Gate:</strong> ${gate.value}</p>`;
+            });
+
+            document.getElementById('gateValues').innerHTML = html;
+        }
+
+        function resetLSTMDemo() {
+            initializeLSTMVisualization();
+            document.getElementById('gateValues').innerHTML = '';
+        }
+
+        // Initialize cell state chart
+        function createCellStateChart() {
+            const timeSteps = Array.from({length: 10}, (_, i) => i);
+            const cellState = timeSteps.map(() => Math.random() * 2 - 1);
+
+            const data = [{
+                x: timeSteps,
+                y: cellState,
+                type: 'scatter',
+                mode: 'lines+markers',
+                line: { color: '#4ecdc4' },
+                marker: { size: 8 }
+            }];
+
+            const layout = {
+                title: 'Cell State Over Time',
+                xaxis: { title: 'Time Step' },
+                yaxis: { title: 'Cell State Value' },
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                font: { color: 'white' }
+            };
+
+            Plotly.newPlot('cellStateChart', data, layout, { responsive: true });
+        }
+
+        // Text Generation Functions
+        function trainTextRNN() {
+            const text = document.getElementById('trainingText').value;
+            document.getElementById('generatedText').innerHTML = 'Training RNN on your text...\n\n';
+            
+            // Simulate training process
+            setTimeout(() => {
+                document.getElementById('generatedText').innerHTML += 'Training complete!\nVocabulary size: ' + new Set(text.toLowerCase().split('')).size + ' characters\n';
+                document.getElementById('generatedText').innerHTML += 'Training loss: 0.234\n';
+                document.getElementById('generatedText').innerHTML += 'Ready to generate text!\n';
+                
+                // Create training loss chart
+                createRNNTrainingChart();
+            }, 2000);
+        }
+
+        function generateText() {
+            const temperature = document.getElementById('temperature').value;
+            const length = document.getElementById('genLength').value;
+            document.getElementById('tempValue').textContent = temperature;
+            document.getElementById('lengthValue').textContent = length;
+
+            const seedText = "The quick brown";
+            let generatedText = seedText;
+
+            // Simulate text generation
+            const words = ["fox", "jumps", "over", "the", "lazy", "dog", "and", "runs", "through", "the", "forest", "quickly", "while", "being", "chased", "by", "hunters"];
+            
+            for (let i = 0; i < Math.min(length / 6, 50); i++) {
+                const randomWord = words[Math.floor(Math.random() * words.length)];
+                generatedText += " " + randomWord;
+            }
+
+            document.getElementById('generatedText').innerHTML = generatedText;
+            
+            // Show character probabilities
+            createCharacterProbabilityChart();
+        }
+
+        function createRNNTrainingChart() {
+            const epochs = Array.from({length: 50}, (_, i) => i);
+            const losses = epochs.map(e => 2 * Math.exp(-e / 15) + 0.1 + 0.05 * Math.random());
+
+            const data = [{
+                x: epochs,
+                y: losses,
+                type: 'scatter',
+                mode: 'lines',
+                line: { color: '#ff6b6b' },
+                name: 'Training Loss'
+            }];
+
+            const layout = {
+                title: 'RNN Training Loss',
+                xaxis: { title: 'Epoch' },
+                yaxis: { title: 'Loss' },
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                font: { color: 'white' }
+            };
+
+            Plotly.newPlot('rnnTrainingLoss', data, layout, { responsive: true });
+        }
+
+        function createCharacterProbabilityChart() {
+            const characters = ['a', 'e', 'i', 'o', 'u', 't', 'n', 's', 'r', 'l'];
+            const probabilities = characters.map(() => Math.random());
+
+            const data = [{
+                x: characters,
+                y: probabilities,
+                type: 'bar',
+                marker: { color: '#4ecdc4' }
+            }];
+
+            const layout = {
+                title: 'Next Character Probabilities',
+                xaxis: { title: 'Character' },
+                yaxis: { title: 'Probability' },
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                font: { color: 'white' }
+            };
+
+            Plotly.newPlot('characterProbabilities', data, layout, { responsive: true });
+        }
+
+        // RNN Architecture comparison
+        function createRNNArchComparison() {
+            const architectures = ['Vanilla RNN', 'LSTM', 'GRU', 'Bidirectional LSTM'];
+            const parameters = [1000, 4000, 3000, 8000];
+            const performance = [75, 92, 89, 95];
+
+            const trace1 = {
+                x: architectures,
+                y: parameters,
+                name: 'Parameters (thousands)',
+                type: 'bar',
+                marker: { color: '#ff6b6b' }
+            };
+
+            const trace2 = {
+                x: architectures,
+                y: performance,
+                name: 'Performance (%)',
+                type: 'bar',
+                yaxis: 'y2',
+                marker: { color: '#4ecdc4' }
+            };
+
+            const layout = {
+                title: 'RNN Architecture Comparison',
+                xaxis: { title: 'Architecture' },
+                yaxis: { title: 'Parameters (thousands)' },
+                yaxis2: {
+                    title: 'Performance (%)',
+                    overlaying: 'y',
+                    side: 'right'
+                },
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                font: { color: 'white' }
+            };
+
+            Plotly.newPlot('rnnArchComparison', [trace1, trace2], layout, { responsive: true });
+        }
+
+        // Initialize everything
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeSection('basics');
+            generateRandomFilters();
+            drawTransformerArchitecture();
+            createCellStateChart();
+            createRNNArchComparison();
+        });
+
+        // Transformer Functions
+        function initializeTransformerDemo() {
+            initializeAttentionDemo();
+            drawTransformerArchitecture();
+        }
+
+        function initializeAttentionDemo() {
+            computeAttention();
+        }
+
+        function computeAttention() {
+            const input = document.getElementById('attentionInput').value;
+            const tokens = input.split(' ');
+            
+            // Generate random attention matrix
+            const attentionMatrix = [];
+            for (let i = 0; i < tokens.length; i++) {
+                const row = [];
+                for (let j = 0; j < tokens.length; j++) {
+                    // Higher attention to nearby tokens and self
+                    const distance = Math.abs(i - j);
+                    const attention = Math.exp(-distance / 2) + (i === j ? 0.5 : 0) + 0.1 * Math.random();
+                    row.push(attention);
+                }
+                // Normalize row
+                const sum = row.reduce((a, b) => a + b, 0);
+                attentionMatrix.push(row.map(val => val / sum));
+            }
+
+            // Create heatmap
+            const data = [{
+                z: attentionMatrix,
+                x: tokens,
+                y: tokens,
+                type: 'heatmap',
+                colorscale: [
+                    [0, 'rgba(0,0,0,0.8)'],
+                    [1, 'rgba(78, 205, 196, 1)']
+                ],
+                showscale: true
+            }];
+
+            const layout = {
+                title: 'Self-Attention Matrix',
+                xaxis: { title: 'Keys/Values' },
+                yaxis: { title: 'Queries' },
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                font: { color: 'white' }
+            };
+
+            Plotly.newPlot('attentionMatrix', data, layout, { responsive: true });
+        }
+
+        function updateAttentionHead() {
+            const head = document.getElementById('attentionHead').value;
+            document.getElementById('headNumber').textContent = head;
+            computeAttention();
+        }
+
+        function updateAttentionLayer() {
+            const layer = document.getElementById('attentionLayer').value;
+            document.getElementById('layerNumber').textContent = layer;
+            computeAttention();
+        }
+
+        function drawTransformerArchitecture() {
+            const svg = d3.select('#transformerArchViz')
+                .html('')
+                .append('svg')
+                .attr('width', '100%')
+                .attr('height', '100%')
+                .attr('viewBox', '0 0 800 600');
+
+            // Define arrow marker
+            svg.append('defs').append('marker')
+                .attr('id', 'arrowhead')
+                .attr('viewBox', '-0 -5 10 10')
+                .attr('refX', 5)
+                .attr('refY', 0)
+                .attr('orient', 'auto')
+                .attr('markerWidth', 5)
+                .attr('markerHeight', 5)
+                .append('path')
+                .attr('d', 'M 0,-5 L 10 ,0 L 0,5')
+                .style('fill', 'white');
+
+            // Encoder side
+            const encoderLayers = 6;
+            for (let i = 0; i < encoderLayers; i++) {
+                const y = 500 - i * 80;
+                
+                // Attention block
+                svg.append('rect')
+                    .attr('x', 100)
+                    .attr('y', y)
+                    .attr('width', 150)
+                    .attr('height', 30)
+                    .attr('rx', 5)
+                    .style('fill', '#4ecdc4')
+                    .style('stroke', 'white');
+                
+                svg.append('text')
+                    .attr('x', 175)
+                    .attr('y', y + 20)
+                    .attr('text-anchor', 'middle')
+                    .style('fill', 'white')
+                    .style('font-size', '12px')
+                    .text('Multi-Head Attention');
+                
+                // Feed forward
+                svg.append('rect')
+                    .attr('x', 100)
+                    .attr('y', y + 40)
+                    .attr('width', 150)
+                    .attr('height', 30)
+                    .attr('rx', 5)
+                    .style('fill', '#ff6b6b')
+                    .style('stroke', 'white');
+                
+                svg.append('text')
+                    .attr('x', 175)
+                    .attr('y', y + 60)
+                    .attr('text-anchor', 'middle')
+                    .style('fill', 'white')
+                    .style('font-size', '12px')
+                    .text('Feed Forward');
+            }
+
+            // Decoder side
+            const decoderLayers = 6;
+            for (let i = 0; i < decoderLayers; i++) {
+                const y = 500 - i * 80;
+                
+                // Masked attention
+                svg.append('rect')
+                    .attr('x', 450)
+                    .attr('y', y)
+                    .attr('width', 150)
+                    .attr('height', 20)
+                    .attr('rx', 5)
+                    .style('fill', '#45b7d1')
+                    .style('stroke', 'white');
+                
+                svg.append('text')
+                    .attr('x', 525)
+                    .attr('y', y + 15)
+                    .attr('text-anchor', 'middle')
+                    .style('fill', 'white')
+                    .style('font-size', '10px')
+                    .text('Masked Attention');
+                
+                // Cross attention
+                svg.append('rect')
+                    .attr('x', 450)
+                    .attr('y', y + 25)
+                    .attr('width', 150)
+                    .attr('height', 20)
+                    .attr('rx', 5)
+                    .style('fill', '#feca57')
+                    .style('stroke', 'white');
+                
+                svg.append('text')
+                    .attr('x', 525)
+                    .attr('y', y + 40)
+                    .attr('text-anchor', 'middle')
+                    .style('fill', 'white')
+                    .style('font-size', '10px')
+                    .text('Cross Attention');
+                
+                // Feed forward
+                svg.append('rect')
+                    .attr('x', 450)
+                    .attr('y', y + 50)
+                    .attr('width', 150)
+                    .attr('height', 20)
+                    .attr('rx', 5)
+                    .style('fill', '#ff6b6b')
+                    .style('stroke', 'white');
+                
+                svg.append('text')
+                    .attr('x', 525)
+                    .attr('y', y + 65)
+                    .attr('text-anchor', 'middle')
+                    .style('fill', 'white')
+                    .style('font-size', '10px')
+                    .text('Feed Forward');
+                
+                // Cross-attention connection
+                svg.append('line')
+                    .attr('x1', 250)
+                    .attr('y1', y + 35)
+                    .attr('x2', 450)
+                    .attr('y2', y + 35)
+                    .style('stroke', '#feca57')
+                    .style('stroke-width', 2)
+                    .attr('marker-end', 'url(#arrowhead)');
+            }
+
+            // Labels
+            svg.append('text')
+                .attr('x', 175)
+                .attr('y', 30)
+                .attr('text-anchor', 'middle')
+                .style('fill', '#4ecdc4')
+                .style('font-size', '18px')
+                .style('font-weight', 'bold')
+                .text('ENCODER');
+
+            svg.append('text')
+                .attr('x', 525)
+                .attr('y', 30)
+                .attr('text-anchor', 'middle')
+                .style('fill', '#45b7d1')
+                .style('font-size', '18px')
+                .style('font-weight', 'bold')
+                .text('DECODER');
+        }
+
+        function animateTransformerFlow() {
+            drawTransformerArchitecture();
+            
+            // Add flowing animation
+            const svg = d3.select('#transformerArchViz svg');
+            
+            svg.selectAll('rect')
+                .transition()
+                .duration(2000)
+                .style('opacity', 0.5)
+                .transition()
+                .duration(2000)
+                .style('opacity', 1);
+        }
+
+        function highlightAttention() {
+            const svg = d3.select('#transformerArchViz svg');
+            
+            svg.selectAll('rect')
+                .style('fill', function() {
+                    const text = d3.select(this.nextSibling).text();
+                    return text.includes('Attention') ? '#ff6b6b' : '#666';
+                });
+        }
+
+        function showEncoderDecoder() {
+            drawTransformerArchitecture();
+        }
+
+        // Text generation with transformers
+        function generateTransformerText() {
+            const prompt = document.getElementById('promptInput').value;
+            const maxLength = document.getElementById('maxLength').value;
+            const temperature = document.getElementById('genTemperature').value;
+            
+            document.getElementById('maxLenValue').textContent = maxLength;
+            document.getElementById('genTempValue').textContent = temperature;
+
+            // Simulate text generation
+            let generatedText = prompt + ' ';
+            const continuations = [
+                'there lived a brave explorer who discovered',
+                'scientists were working on a revolutionary technology that could',
+                'the inhabitants had developed an amazing civilization with',
+                'a mysterious signal was detected from the outer rim that',
+                'ancient artifacts were found that revealed secrets about'
+            ];
+
+            const randomContinuation = continuations[Math.floor(Math.random() * continuations.length)];
+            generatedText += randomContinuation + '...';
+
+            // Add more text based on temperature
+            if (parseFloat(temperature) > 1.0) {
+                generatedText += ' (High temperature: more creative/random output)';
+            } else if (parseFloat(temperature) < 0.5) {
+                generatedText += ' (Low temperature: more focused/deterministic output)';
+            }
+
+            document.getElementById('transformerOutput').textContent = generatedText;
+            
+            // Show visualizations
+            createTokenProbabilityChart();
+            createGenerationAttentionChart();
+        }
+
+        function createTokenProbabilityChart() {
+            const tokens = ['and', 'the', 'of', 'to', 'in', 'with', 'for', 'from', 'by', 'at'];
+            const probabilities = tokens.map(() => Math.random() * 0.8 + 0.1);
+
+            const data = [{
+                x: tokens,
+                y: probabilities,
+                type: 'bar',
+                marker: { color: '#4ecdc4' }
+            }];
+
+            const layout = {
+                title: 'Next Token Probabilities',
+                xaxis: { title: 'Token' },
+                yaxis: { title: 'Probability' },
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                font: { color: 'white' }
+            };
+
+            Plotly.newPlot('tokenProbabilities', data, layout, { responsive: true });
+        }
+
+        function createGenerationAttentionChart() {
+            const tokens = ['Once', 'upon', 'a', 'time', 'in', 'a', 'distant', 'galaxy'];
+            const attentionWeights = tokens.map(() => Math.random());
+
+            const data = [{
+                x: tokens,
+                y: attentionWeights,
+                type: 'scatter',
+                mode: 'markers+lines',
+                marker: { 
+                    size: attentionWeights.map(w => w * 20 + 5),
+                    color: '#ff6b6b'
+                },
+                line: { color: '#ff6b6b' }
+            }];
+
+            const layout = {
+                title: 'Attention Weights for Current Token',
+                xaxis: { title: 'Previous Tokens' },
+                yaxis: { title: 'Attention Weight' },
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                font: { color: 'white' }
+            };
+
+            Plotly.newPlot('generationAttention', data, layout, { responsive: true });
+        }
+
+        function stepByStepGeneration() {
+            const output = document.getElementById('transformerOutput');
+            const prompt = document.getElementById('promptInput').value;
+            
+            output.textContent = prompt;
+            
+            const words = ['magical', 'forest', 'where', 'creatures', 'lived', 'peacefully'];
+            let wordIndex = 0;
+            
+            const interval = setInterval(() => {
+                if (wordIndex >= words.length) {
+                    clearInterval(interval);
+                    return;
+                }
+                
+                output.textContent += ' ' + words[wordIndex];
+                createTokenProbabilityChart(); // Update probabilities
+                wordIndex++;
+            }, 1500);
+        }
+
+        function showAttentionFlow() {
+            // Animate attention visualization
+            computeAttention();
+            document.getElementById('attentionMatrix').style.animation = 'pulse 3s infinite';
+            setTimeout(() => {
+                document.getElementById('attentionMatrix').style.animation = '';
+            }, 6000);
+        }
+
+        // Training simulation for transformers
+        function simulateTraining() {
+            createTransformerLossChart();
+            createLearningRateChart();
+            createAttentionEvolutionChart();
+            createGradientNormChart();
+        }
+
+        function createTransformerLossChart() {
+            const epochs = Array.from({length: 100}, (_, i) => i);
+            const trainLoss = epochs.map(e => 4 * Math.exp(-e / 30) + 0.5 + 0.1 * Math.random());
+            const valLoss = epochs.map(e => 4 * Math.exp(-e / 25) + 0.7 + 0.15 * Math.random());
+
+            const data = [
+                {
+                    x: epochs,
+                    y: trainLoss,
+                    name: 'Training Loss',
+                    type: 'scatter',
+                    mode: 'lines',
+                    line: { color: '#ff6b6b' }
+                },
+                {
+                    x: epochs,
+                    y: valLoss,
+                    name: 'Validation Loss',
+                    type: 'scatter',
+                    mode: 'lines',
+                    line: { color: '#4ecdc4' }
+                }
+            ];
+
+            const layout = {
+                title: 'Transformer Training Loss',
+                xaxis: { title: 'Epoch' },
+                yaxis: { title: 'Loss' },
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                font: { color: 'white' }
+            };
+
+            Plotly.newPlot('transformerLoss', data, layout, { responsive: true });
+        }
+
+        function createLearningRateChart() {
+            const steps = Array.from({length: 1000}, (_, i) => i);
+            const warmupSteps = 100;
+            const lrs = steps.map(step => {
+                if (step < warmupSteps) {
+                    return (step / warmupSteps) * 1e-3;
+                } else {
+                    return 1e-3 * Math.pow(0.5, Math.floor((step - warmupSteps) / 200));
+                }
+            });
+
+            const data = [{
+                x: steps,
+                y: lrs,
+                type: 'scatter',
+                mode: 'lines',
+                line: { color: '#45b7d1' },
+                name: 'Learning Rate'
+            }];
+
+            const layout = {
+                title: 'Learning Rate Schedule (with Warmup)',
+                xaxis: { title: 'Training Step' },
+                yaxis: { title: 'Learning Rate', type: 'log' },
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                font: { color: 'white' }
+            };
+
+            Plotly.newPlot('learningRateSchedule', data, layout, { responsive: true });
+        }
+
+        function createAttentionEvolutionChart() {
+            const layers = ['L1', 'L2', 'L3', 'L4', 'L5', 'L6'];
+            const heads = Array.from({length: 8}, (_, i) => `H${i+1}`);
+            
+            const attentionData = layers.map(layer => 
+                heads.map(() => Math.random() * 0.8 + 0.1)
+            );
+
+            const data = [{
+                z: attentionData,
+                x: heads,
+                y: layers,
+                type: 'heatmap',
+                colorscale: 'Viridis',
+                showscale: true
+            }];
+
+            const layout = {
+                title: 'Attention Head Activation by Layer',
+                xaxis: { title: 'Attention Heads' },
+                yaxis: { title: 'Layers' },
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                font: { color: 'white' }
+            };
+
+            Plotly.newPlot('attentionEvolution', data, layout, { responsive: true });
+        }
+
+        function createGradientNormChart() {
+            const steps = Array.from({length: 500}, (_, i) => i);
+            const gradNorms = steps.map(() => Math.random() * 2 + 0.5);
+
+            const data = [{
+                x: steps,
+                y: gradNorms,
+                type: 'scatter',
+                mode: 'lines',
+                line: { color: '#feca57' },
+                name: 'Gradient Norm'
+            }];
+
+            const layout = {
+                title: 'Gradient Norm During Training',
+                xaxis: { title: 'Training Step' },
+                yaxis: { title: 'Gradient Norm' },
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                font: { color: 'white' }
+            };
+
+            Plotly.newPlot('gradientNorms', data, layout, { responsive: true });
+        }
+
+        function showWarmupSchedule() {
+            createLearningRateChart();
+            document.getElementById('learningRateSchedule').style.animation = 'pulse 3s infinite';
+            setTimeout(() => {
+                document.getElementById('learningRateSchedule').style.animation = '';
+            }, 6000);
+        }
+
+        function resetTrainingViz() {
+            ['transformerLoss', 'learningRateSchedule', 'attentionEvolution', 'gradientNorms'].forEach(id => {
+                document.getElementById(id).innerHTML = '';
+            });
+        }
+
+        // Update slider values
+        document.addEventListener('input', function(e) {
+            if (e.target.type === 'range') {
+                const valueSpan = document.getElementById(e.target.id + 'Value') || 
+                                document.getElementById(e.target.id.replace('Slider', 'Value'));
+                if (valueSpan) {
+                    valueSpan.textContent = e.target.value;
+                }
+            }
+        });
