@@ -1,4 +1,4 @@
-# [Click here](https://gghimire2041.github.io/generative-AI) to experience more interactive and engaging AI learning experience:
+# [Click here](https://gghimire2041.github.io/generative-AI) 
 
 
 # 🎨 Generative AI: From Rule-Based Systems to Creative Machines
