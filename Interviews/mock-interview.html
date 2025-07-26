@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mock Interview - MarsMart Data Scientist</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            color: white;
+        }
+
+        .header {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 1rem 2rem;
+            backdrop-filter: blur(15px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .company-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .logo {
+            font-size: 2rem;
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: bold;
+        }
+
+        .position {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: bold;
+        }
+
+        .back-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+        }
+
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .main-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 2rem;
+            min-height: calc(100vh - 80px);
+        }
+
+        .intro {
+            text-align: center;
+            margin-bottom: 2rem;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 3rem 2rem;
+            border-radius: 25px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .intro h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24, #feca57);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .interview-container {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .interviewer {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 1rem;
+            border-radius: 15px;
+        }
+
+        .interviewer-avatar {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+        }
+
+        .question-section {
+            margin-bottom: 2rem;
+        }
+
+        .domain-header {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            padding: 1rem;
+            border-radius: 15px;
+            margin-bottom: 1rem;
+            text-align: center;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        .question {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 1.5rem;
+            border-radius: 15px;
+            margin-bottom: 1rem;
+            border-left: 4px solid #667eea;
+        }
+
+        .question h4 {
+            color: #74b9ff;
+            margin-bottom: 0.5rem;
+        }
+
+        .answer-input {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            padding: 1rem;
+            color: white;
+            font-family: inherit;
+            resize: vertical;
+            min-height: 80px;
+            margin-top: 1rem;
+        }
+
+        .answer-input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .answer-input:focus {
+            outline: none;
+            border-color: #667eea;
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 1rem 0;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .progress {
+            background: rgba(255, 255, 255, 0.1);
+            height: 8px;
+            border-radius: 4px;
+            margin: 2rem 0;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.5s ease;
+            width: 0%;
+        }
+
+        .user-questions {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 2rem;
+            border-radius: 20px;
+            margin: 2rem 0;
+        }
+
+        .user-questions h3 {
+            text-align: center;
+            margin-bottom: 1.5rem;
+            color: #74b9ff;
+        }
+
+        .question-input {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .question-input input {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 25px;
+            padding: 1rem 1.5rem;
+            color: white;
+            font-family: inherit;
+        }
+
+        .ask-btn {
+            background: linear-gradient(45deg, #00b894, #00a085);
+            padding: 1rem 1.5rem;
+            border-radius: 25px;
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .results {
+            text-align: center;
+            padding: 3rem 2rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 25px;
+            backdrop-filter: blur(10px);
+            margin-top: 2rem;
+        }
+
+        .result-animation {
+            font-size: 4rem;
+            margin: 2rem 0;
+            animation: bounce 2s infinite;
+        }
+
+        .hired {
+            color: #00b894;
+        }
+
+        .not-hired {
+            color: #e17055;
+        }
+
+        .feedback {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 2rem;
+            border-radius: 15px;
+            margin-top: 2rem;
+            text-align: left;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% {
+                transform: translateY(0);
+            }
+            40% {
+                transform: translateY(-30px);
+            }
+            60% {
+                transform: translateY(-15px);
+            }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                gap: 1rem;
+                text-align: center;
+            }
+
+            .main-container {
+                padding: 1rem;
+            }
+
+            .intro h1 {
+                font-size: 2rem;
+            }
+
+            .question-input {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="company-info">
+            <div class="logo">🚀 MarsMart</div>
+            <div class="position">Data Scientist Interview</div>
+        </div>
+        <a href="index.html" class="back-btn">← Back to Hub</a>
+    </div>
+
+    <div class="main-container">
+        <!-- Intro Section -->
+        <div class="intro" id="intro">
+            <h1>🎯 Welcome to MarsMart!</h1>
+            <p style="font-size: 1.2rem; margin-bottom: 1.5rem;">
+                Thank you for your interest in the Data Scientist position at MarsMart, 
+                the leading interplanetary e-commerce platform.
+            </p>
+            <p style="margin-bottom: 2rem; line-height: 1.6;">
+                This interview will cover various aspects of data science including technical skills, 
+                programming knowledge, and behavioral questions. You'll have the opportunity to showcase 
+                your expertise across multiple domains and ask questions about our company.
+            </p>
+            <button class="btn" onclick="startInterview()">Start Interview</button>
+        </div>
+
+        <!-- Interview Section -->
+        <div class="interview-container hidden" id="interviewContainer">
+            <div class="interviewer fade-in">
+                <div class="interviewer-avatar">👨‍💼</div>
+                <div>
+                    <h3>Alex Chen - Senior Data Science Manager</h3>
+                    <p>"Looking forward to learning about your background and expertise!"</p>
+                </div>
+            </div>
+
+            <div class="progress">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+
+            <div id="questionsContainer"></div>
+
+            <button class="btn" id="nextBtn" onclick="nextSection()" disabled>Continue to Next Section</button>
+        </div>
+
+        <!-- User Questions Section -->
+        <div class="user-questions hidden" id="userQuestionsSection">
+            <h3>🤔 Your Turn to Ask Questions!</h3>
+            <p style="text-align: center; margin-bottom: 2rem;">
+                Now you can ask up to 3 questions about MarsMart, the role, or anything else you'd like to know.
+            </p>
+            <div id="userQuestionsContainer">
+                <div class="question-input">
+                    <input type="text" placeholder="Ask your first question..." id="userQ1">
+                    <button class="ask-btn" onclick="askQuestion(1)">Ask</button>
+                </div>
+            </div>
+            <button class="btn" id="finishBtn" onclick="finishInterview()" disabled>Complete Interview</button>
+        </div>
+
+        <!-- Results Section -->
+        <div class="results hidden" id="results">
+            <h2>🎊 Interview Complete!</h2>
+            <div class="result-animation" id="resultAnimation"></div>
+            <h1 id="resultText"></h1>
+            <div class="feedback" id="feedback"></div>
+            <button class="btn" onclick="restartInterview()">Try Another Interview</button>
+        </div>
+    </div>
+
+    <script>
+        let currentSection = 0;
+        let currentQuestionInSection = 0;
+        let answers = {};
+        let score = 0;
+        let userQuestionsAsked = 0;
+
+        const sections = [
+            {
+                name: "Basic Data Science",
+                questions: [
+                    { id: "ds1", question: "Explain the difference between supervised and unsupervised learning with examples.", weight: 10 },
+                    { id: "ds2", question: "What is the curse of dimensionality and how would you handle it?", weight: 15 },
+                    { id: "ds3", question: "How would you handle missing data in a dataset? Discuss different strategies.", weight: 10 }
+                ]
+            },
+            {
+                name: "Python Programming",
+                questions: [
+                    { id: "py1", question: "Write a Python function to find the most frequent element in a list.", weight: 10 },
+                    { id: "py2", question: "Explain the difference between list comprehension and generator expressions. When would you use each?", weight: 12 }
+                ]
+            },
+            {
+                name: "Neural Networks",
+                questions: [
+                    { id: "nn1", question: "Explain backpropagation algorithm and its role in training neural networks.", weight: 15 },
+                    { id: "nn2", question: "What is the vanishing gradient problem and how do modern architectures address it?", weight: 18 },
+                    { id: "nn3", question: "Compare different activation functions (ReLU, Sigmoid, Tanh) and their use cases.", weight: 12 }
+                ]
+            },
+            {
+                name: "Transformers & Attention",
+                questions: [
+                    { id: "tr1", question: "Explain the self-attention mechanism in Transformers. Why is it important?", weight: 20 },
+                    { id: "tr2", question: "What are the advantages of Transformers over RNNs for sequence modeling?", weight: 18 }
+                ]
+            },
+            {
+                name: "Generative AI",
+                questions: [
+                    { id: "gen1", question: "Explain the concept of fine-tuning in large language models. What is RLHF?", weight: 20 },
+                    { id: "gen2", question: "How would you evaluate the quality of generated text from a language model?", weight: 15 },
+                    { id: "gen3", question: "Discuss potential risks and ethical considerations when deploying generative AI systems.", weight: 18 }
+                ]
+            },
+            {
+                name: "Behavioral Questions",
+                questions: [
+                    { id: "beh1", question: "Tell me about a challenging data science project you worked on. What obstacles did you face and how did you overcome them?", weight: 15 },
+                    { id: "beh2", question: "How do you communicate complex technical results to non-technical stakeholders?", weight: 12 }
+                ]
+            },
+            {
+                name: "Deployment & MLOps",
+                questions: [
+                    { id: "dep1", question: "How would you monitor a machine learning model in production? What metrics would you track?", weight: 15 },
+                    { id: "dep2", question: "Describe strategies for handling model drift and when you might need to retrain a model.", weight: 18 },
+                    { id: "dep3", question: "What considerations are important when scaling ML models for high-traffic applications?", weight: 15 }
+                ]
+            }
+        ];
+
+        const marsmartResponses = [
+            "That's a great question! At MarsMart, we're building the future of interplanetary commerce, connecting Earth, Mars, and soon other planets in our solar system.",
+            "We believe in fostering innovation and giving our data scientists the freedom to experiment with cutting-edge technologies while solving real-world problems.",
+            "Our work environment is collaborative and fast-paced. We're currently working on exciting projects like demand forecasting across different planetary markets and optimizing space logistics.",
+            "We offer competitive compensation, stock options, and the unique opportunity to literally help shape commerce across planets!",
+            "Our data science team works closely with engineers, product managers, and domain experts to ensure our models create real business value."
+        ];
+
+        function startInterview() {
+            document.getElementById('intro').classList.add('hidden');
+            document.getElementById('interviewContainer').classList.remove('hidden');
+            showCurrentSection();
+        }
+
+        function showCurrentSection() {
+            const section = sections[currentSection];
+            const container = document.getElementById('questionsContainer');
+            
+            container.innerHTML = `
+                <div class="domain-header fade-in">
+                    ${section.name} (${currentSection + 1}/${sections.length})
+                </div>
+            `;
+
+            section.questions.forEach((q, index) => {
+                container.innerHTML += `
+                    <div class="question fade-in">
+                        <h4>Q${index + 1}: ${q.question}</h4>
+                        <textarea class="answer-input" id="${q.id}" placeholder="Type your answer here..." 
+                                onkeyup="checkSectionComplete()"></textarea>
+                    </div>
+                `;
+            });
+
+            updateProgress();
+        }
+
+        function checkSectionComplete() {
+            const section = sections[currentSection];
+            let allAnswered = true;
+
+            section.questions.forEach(q => {
+                const answer = document.getElementById(q.id).value.trim();
+                if (answer === '') {
+                    allAnswered = false;
+                } else {
+                    answers[q.id] = answer;
+                }
+            });
+
+            document.getElementById('nextBtn').disabled = !allAnswered;
+        }
+
+        function nextSection() {
+            // Score current section
+            scoreCurrentSection();
+            
+            currentSection++;
+            currentQuestionInSection = 0;
+
+            if (currentSection >= sections.length) {
+                showUserQuestions();
+            } else {
+                showCurrentSection();
+            }
+        }
+
+        function scoreCurrentSection() {
+            const section = sections[currentSection];
+            section.questions.forEach(q => {
+                const answer = answers[q.id];
+                if (answer && answer.length > 20) { // Basic quality check
+                    score += q.weight * (answer.length > 100 ? 1 : 0.7); // Bonus for detailed answers
+                }
+            });
+        }
+
+        function updateProgress() {
+            const progress = ((currentSection + 1) / sections.length) * 100;
+            document.getElementById('progressBar').style.width = progress + '%';
+        }
+
+        function showUserQuestions() {
+            document.getElementById('interviewContainer').classList.add('hidden');
+            document.getElementById('userQuestionsSection').classList.remove('hidden');
+        }
+
+        function askQuestion(questionNum) {
+            const input = document.getElementById(`userQ${questionNum}`);
+            const question = input.value.trim();
+            
+            if (question === '') return;
+
+            userQuestionsAsked++;
+            
+            // Add interviewer response
+            const container = document.getElementById('userQuestionsContainer');
+            const responseIndex = Math.floor(Math.random() * marsmartResponses.length);
+            
+            container.innerHTML += `
+                <div style="background: rgba(255,255,255,0.1); padding: 1rem; border-radius: 10px; margin: 1rem 0;">
+                    <strong>Your Question:</strong> ${question}<br><br>
+                    <strong>Alex:</strong> ${marsmartResponses[responseIndex]}
+                </div>
+            `;
+
+            input.value = '';
+            input.disabled = true;
+
+            if (userQuestionsAsked < 3) {
+                container.innerHTML += `
+                    <div class="question-input">
+                        <input type="text" placeholder="Ask your ${userQuestionsAsked === 1 ? 'second' : 'third'} question..." id="userQ${userQuestionsAsked + 1}">
+                        <button class="ask-btn" onclick="askQuestion(${userQuestionsAsked + 1})">Ask</button>
+                    </div>
+                `;
+            }
+
+            if (userQuestionsAsked >= 3) {
+                document.getElementById('finishBtn').disabled = false;
+            }
+        }
+
+        function finishInterview() {
+            // Calculate final score
+            const maxScore = sections.reduce((total, section) => {
+                return total + section.questions.reduce((sectionTotal, q) => sectionTotal + q.weight, 0);
+            }, 0);
+
+            const scorePercentage = (score / maxScore) * 100;
+            const hired = scorePercentage >= 60; // 60% threshold for hiring
+
+            // Show results
+            document.getElementById('userQuestionsSection').classList.add('hidden');
+            document.getElementById('results').classList.remove('hidden');
+
+            const resultAnimation = document.getElementById('resultAnimation');
+            const resultText = document.getElementById('resultText');
+            const feedback = document.getElementById('feedback');
+
+            if (hired) {
+                resultAnimation.textContent = '🎉';
+                resultAnimation.className = 'result-animation hired';
+                resultText.textContent = 'HIRED!';
+                resultText.className = 'hired';
+                feedback.innerHTML = `
+                    <h3>🎊 Congratulations!</h3>
+                    <p>We're excited to offer you the Data Scientist position at MarsMart! 
+                    Your technical knowledge and communication skills impressed our team.</p>
+                    <p><strong>Your Score:</strong> ${Math.round(scorePercentage)}%</p>
+                    <p><strong>Next Steps:</strong> Our HR team will contact you within 2-3 business days 
+                    with the formal offer and details about your start date.</p>
+                    <p>Welcome to the MarsMart family! 🚀</p>
+                `;
+            } else {
+                resultAnimation.textContent = '😔';
+                resultAnimation.className = 'result-animation not-hired';
+                resultText.textContent = 'NOT HIRED';
+                resultText.className = 'not-hired';
+                feedback.innerHTML = `
+                    <h3>Thank You for Your Interest</h3>
+                    <p>While we were impressed with your enthusiasm, we've decided to move forward 
+                    with other candidates whose experience more closely matches our current needs.</p>
+                    <p><strong>Your Score:</strong> ${Math.round(scorePercentage)}%</p>
+                    <p><strong>Feedback:</strong> We encourage you to continue developing your skills, 
+                    particularly in areas like ${scorePercentage < 40 ? 'fundamental data science concepts and neural networks' : 'advanced topics like transformers and MLOps'}.</p>
+                    <p>We encourage you to apply again in the future as your skills develop. Good luck! 🌟</p>
+                `;
+            }
+        }
+
+        function restartInterview() {
+            currentSection = 0;
+            currentQuestionInSection = 0;
+            answers = {};
+            score = 0;
+            userQuestionsAsked = 0;
+
+            document.getElementById('results').classList.add('hidden');
+            document.getElementById('intro').classList.remove('hidden');
+            document.getElementById('nextBtn').disabled = true;
+            document.getElementById('finishBtn').disabled = true;
+            document.getElementById('progressBar').style.width = '0%';
+        }
+    </script>
+</body>
+</html>
