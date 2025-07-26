@@ -1,3 +1,6 @@
+# [Click here](https://gghimire2041.github.io/generative-AI) to experience more interactive and engaging AI learning experience:
+
+
 # 🎨 Generative AI: From Rule-Based Systems to Creative Machines
 
 Welcome to the **Generative AI Archive** — a curated, evolving repository of ideas, papers, code, demos, and discussions around the thrilling world of **Generative Artificial Intelligence**.
