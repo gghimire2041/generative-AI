@@ -1,0 +1,1608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced AI Architectures - Interactive Guide</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            line-height: 1.6;
+        }
+
+        .header {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 2rem;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1, #feca57);
+            background-size: 300% 300%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: gradientShift 4s ease-in-out infinite;
+        }
+
+        .nav {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 1rem;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .nav-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .nav-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid transparent;
+            color: white;
+            padding: 0.8rem 1.5rem;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: bold;
+        }
+
+        .nav-btn:hover, .nav-btn.active {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .back-btn {
+            position: absolute;
+            left: 2rem;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .section {
+            background: rgba(255, 255, 255, 0.05);
+            margin: 2rem 0;
+            padding: 2rem;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            display: none;
+        }
+
+        .section.active {
+            display: block;
+            animation: fadeInUp 0.5s ease-out;
+        }
+
+        .section h2 {
+            font-size: 2.5rem;
+            margin-bottom: 2rem;
+            text-align: center;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .content-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin: 2rem 0;
+        }
+
+        .content-card {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 2rem;
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .content-card:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateY(-5px);
+        }
+
+        .highlight-box {
+            background: linear-gradient(45deg, rgba(255, 107, 107, 0.2), rgba(78, 205, 196, 0.2));
+            border: 2px solid #4ecdc4;
+            padding: 1.5rem;
+            border-radius: 15px;
+            margin: 1.5rem 0;
+        }
+
+        .tabs {
+            display: flex;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 25px;
+            padding: 0.5rem;
+            margin: 1rem 0;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 0.8rem 1rem;
+            text-align: center;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: bold;
+        }
+
+        .tab.active {
+            background: rgba(255, 255, 255, 0.2);
+            color: #4ecdc4;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 2rem 0;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .math-equation {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 1.5rem;
+            border-radius: 10px;
+            margin: 1rem 0;
+            text-align: center;
+            font-size: 1.1rem;
+            border-left: 4px solid #4ecdc4;
+            font-family: 'Courier New', monospace;
+        }
+
+        .formula-explanation {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 0.5rem 0;
+            border-left: 3px solid #ff6b6b;
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #4ecdc4, #44a08d);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 0.5rem;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(78, 205, 196, 0.3);
+        }
+
+        .interactive-demo {
+            background: linear-gradient(45deg, rgba(255, 107, 107, 0.1), rgba(78, 205, 196, 0.1));
+            padding: 2rem;
+            border-radius: 20px;
+            margin: 2rem 0;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .architecture-viz {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+            padding: 2rem;
+        }
+
+        .component-box {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 1.5rem;
+            border-radius: 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+            min-width: 120px;
+        }
+
+        .component-box:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: #4ecdc4;
+            transform: scale(1.05);
+        }
+
+        .flow-arrow {
+            color: #4ecdc4;
+            font-size: 2rem;
+            margin: 0 1rem;
+        }
+
+        .status-message {
+            background: rgba(78, 205, 196, 0.2);
+            border: 1px solid #4ecdc4;
+            color: #4ecdc4;
+            padding: 1rem;
+            border-radius: 10px;
+            margin: 1rem 0;
+            text-align: center;
+        }
+
+        .generation-output {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 1.5rem;
+            border-radius: 10px;
+            margin: 1rem 0;
+            font-family: 'Courier New', monospace;
+            min-height: 100px;
+            white-space: pre-wrap;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .visualization {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 1.5rem;
+            border-radius: 15px;
+            margin: 1.5rem 0;
+            text-align: center;
+            min-height: 200px;
+        }
+
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin: 1rem 0;
+            justify-content: center;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .slider {
+            width: 150px;
+            height: 5px;
+            border-radius: 5px;
+            background: rgba(255, 255, 255, 0.2);
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #4ecdc4;
+            cursor: pointer;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 1rem 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(45deg, #4ecdc4, #44a08d);
+            border-radius: 10px;
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+
+        .demo-area {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 2rem;
+            border-radius: 15px;
+            margin: 1rem 0;
+        }
+
+        @keyframes gradientShift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        @media (max-width: 768px) {
+            .content-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .nav-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .container {
+                padding: 1rem;
+            }
+            
+            .back-btn {
+                position: relative;
+                left: auto;
+                top: auto;
+                transform: none;
+                margin-bottom: 1rem;
+            }
+
+            .architecture-viz {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <a href="index.html" class="back-btn">← Back to Hub</a>
+        <h1>🚀 Advanced AI Architectures</h1>
+        <p style="font-size: 1.2rem; opacity: 0.9;">
+            Master cutting-edge AI models: VAE, GAN, GPT, BERT & ReAct Agents
+        </p>
+    </div>
+
+    <div class="nav">
+        <div class="nav-buttons">
+            <button class="nav-btn active" onclick="showSection('vae')">VAE</button>
+            <button class="nav-btn" onclick="showSection('gan')">GAN</button>
+            <button class="nav-btn" onclick="showSection('gpt')">GPT</button>
+            <button class="nav-btn" onclick="showSection('bert')">BERT</button>
+            <button class="nav-btn" onclick="showSection('react')">ReAct Agents</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- VAE Section -->
+        <div id="vae" class="section active">
+            <h2>🎨 Variational Autoencoders (VAE)</h2>
+            
+            <div class="highlight-box">
+                <h3>Generate new data by learning probability distributions!</h3>
+                <p>VAEs combine the power of autoencoders with probabilistic modeling to generate new, realistic data samples by learning the underlying distribution of training data.</p>
+            </div>
+
+            <div class="tabs">
+                <div class="tab active" onclick="showTab('vae', 'architecture', this)">Architecture</div>
+                <div class="tab" onclick="showTab('vae', 'math', this)">Mathematics</div>
+                <div class="tab" onclick="showTab('vae', 'demo', this)">Interactive Demo</div>
+            </div>
+
+            <div id="vae-architecture" class="tab-content active">
+                <div class="content-grid">
+                    <div class="content-card">
+                        <h3>🏗️ VAE Architecture</h3>
+                        <p>VAEs consist of an encoder that maps inputs to a probabilistic latent space and a decoder that reconstructs data from latent codes.</p>
+                        
+                        <div class="math-equation">
+                            Encoder: q_φ(z|x) = N(μ(x), σ²(x))<br>
+                            Decoder: p_θ(x|z) = N(f(z), I)
+                        </div>
+                        
+                        <div class="formula-explanation">
+                            <strong>Components:</strong><br>
+                            • φ = encoder parameters<br>
+                            • θ = decoder parameters<br>
+                            • z = latent variables<br>
+                            • μ, σ = mean and variance functions
+                        </div>
+                    </div>
+                    
+                    <div class="content-card">
+                        <h3>🎯 Key Innovations</h3>
+                        <ul>
+                            <li><strong>Reparameterization Trick:</strong> Enables gradient flow through stochastic layers</li>
+                            <li><strong>KL Regularization:</strong> Ensures latent space follows prior distribution</li>
+                            <li><strong>Smooth Latent Space:</strong> Enables meaningful interpolation</li>
+                            <li><strong>Disentangled Representations:</strong> Different dimensions capture different factors</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="visualization">
+                    <h3>VAE Architecture Flow</h3>
+                    <div class="architecture-viz">
+                        <div class="component-box" style="border-color: #ff6b6b;" onclick="explainComponent('encoder')">
+                            <h4>Encoder</h4>
+                            <p>x → μ, σ</p>
+                        </div>
+                        <div class="flow-arrow">→</div>
+                        <div class="component-box" style="border-color: #feca57;" onclick="explainComponent('sampling')">
+                            <h4>Sampling</h4>
+                            <p>z = μ + σ⊙ε</p>
+                        </div>
+                        <div class="flow-arrow">→</div>
+                        <div class="component-box" style="border-color: #4ecdc4;" onclick="explainComponent('decoder')">
+                            <h4>Decoder</h4>
+                            <p>z → x̂</p>
+                        </div>
+                    </div>
+                    <div class="status-message" id="vaeStatus">
+                        Click components to learn more about VAE architecture!
+                    </div>
+                </div>
+            </div>
+
+            <div id="vae-math" class="tab-content">
+                <div class="content-grid">
+                    <div class="content-card">
+                        <h3>📊 Evidence Lower Bound (ELBO)</h3>
+                        <p>VAEs maximize the ELBO, a lower bound on the log-likelihood of the data.</p>
+                        
+                        <div class="math-equation">
+                            ELBO = E_q[log p(x|z)] - KL(q(z|x)||p(z))
+                        </div>
+                        
+                        <div class="formula-explanation">
+                            <strong>Terms:</strong><br>
+                            • Reconstruction term: How well can we rebuild x from z<br>
+                            • Regularization term: How close is q(z|x) to prior p(z)
+                        </div>
+
+                        <h4>Reparameterization Trick:</h4>
+                        <div class="math-equation">
+                            z = μ + σ ⊙ ε, where ε ~ N(0,I)
+                        </div>
+                    </div>
+                    
+                    <div class="content-card">
+                        <h3>🔄 Loss Components</h3>
+                        
+                        <h4>Reconstruction Loss:</h4>
+                        <div class="math-equation">
+                            L_recon = ||x - x̂||²
+                        </div>
+                        
+                        <h4>KL Divergence Loss:</h4>
+                        <div class="math-equation">
+                            L_KL = KL(N(μ,σ²)||N(0,I))<br>
+                            = ½Σ(μ² + σ² - log(σ²) - 1)
+                        </div>
+
+                        <h4>Total Loss:</h4>
+                        <div class="math-equation">
+                            L_VAE = L_recon + β·L_KL
+                        </div>
+                    </div>
+                </div>
+
+                <div class="interactive-demo">
+                    <h3>🔧 Loss Visualization</h3>
+                    <div class="controls">
+                        <div class="control-group">
+                            <label>β Parameter</label>
+                            <input type="range" class="slider" id="betaParam" min="0.1" max="10" step="0.1" value="1" onchange="updateBeta()">
+                            <span id="betaValue">1.0</span>
+                        </div>
+                    </div>
+                    <div id="lossVisualization" class="demo-area">
+                        <p>Reconstruction Loss: 0.234</p>
+                        <p>KL Loss: 0.156</p>
+                        <p>Total Loss: 0.390</p>
+                        <p>Adjust β to see how it affects the trade-off between reconstruction and regularization!</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="vae-demo" class="tab-content">
+                <div class="interactive-demo">
+                    <h3>🎮 VAE Playground</h3>
+                    
+                    <div class="content-grid">
+                        <div class="content-card">
+                            <h4>Latent Space Manipulation</h4>
+                            <div class="controls">
+                                <div class="control-group">
+                                    <label>Latent Dim 1</label>
+                                    <input type="range" class="slider" id="latent1" min="-3" max="3" step="0.1" value="0" onchange="updateLatent()">
+                                    <span id="latent1Value">0.0</span>
+                                </div>
+                                <div class="control-group">
+                                    <label>Latent Dim 2</label>
+                                    <input type="range" class="slider" id="latent2" min="-3" max="3" step="0.1" value="0" onchange="updateLatent()">
+                                    <span id="latent2Value">0.0</span>
+                                </div>
+                            </div>
+                            <button class="btn" onclick="generateFromLatent()">Generate Sample</button>
+                            <div id="generatedSample" class="generation-output">
+                                Adjust latent variables and click generate to see output!
+                            </div>
+                        </div>
+                        
+                        <div class="content-card">
+                            <h4>Training Simulation</h4>
+                            <button class="btn" onclick="startVAETraining()">Start Training</button>
+                            <button class="btn" onclick="resetVAETraining()">Reset</button>
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="vaeProgress"></div>
+                            </div>
+                            <div id="trainingStatus" class="status-message">
+                                Ready to start VAE training!
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- GAN Section -->
+        <div id="gan" class="section">
+            <h2>⚔️ Generative Adversarial Networks (GAN)</h2>
+            
+            <div class="highlight-box">
+                <h3>Two networks in competition create realistic data!</h3>
+                <p>GANs pit a generator against a discriminator in an adversarial game, pushing both networks to improve until the generator creates indistinguishable fake data.</p>
+            </div>
+
+            <div class="tabs">
+                <div class="tab active" onclick="showTab('gan', 'architecture', this)">Architecture</div>
+                <div class="tab" onclick="showTab('gan', 'math', this)">Mathematics</div>
+                <div class="tab" onclick="showTab('gan', 'demo', this)">Adversarial Demo</div>
+            </div>
+
+            <div id="gan-architecture" class="tab-content active">
+                <div class="content-grid">
+                    <div class="content-card">
+                        <h3>⚔️ Adversarial Architecture</h3>
+                        <p>GANs consist of two competing networks: a generator that creates fake data and a discriminator that tries to detect fakes.</p>
+                        
+                        <div class="math-equation">
+                            Generator: G(z) → x_fake<br>
+                            Discriminator: D(x) → [0,1]
+                        </div>
+                        
+                        <div class="formula-explanation">
+                            <strong>The Game:</strong><br>
+                            • Generator tries to fool discriminator<br>
+                            • Discriminator tries to catch fakes<br>
+                            • Both improve through competition
+                        </div>
+                    </div>
+                    
+                    <div class="content-card">
+                        <h3>🎯 Training Objectives</h3>
+                        <ul>
+                            <li><strong>Generator Goal:</strong> Minimize discriminator's ability to detect fakes</li>
+                            <li><strong>Discriminator Goal:</strong> Maximize ability to distinguish real from fake</li>
+                            <li><strong>Nash Equilibrium:</strong> Perfect generator fools perfect discriminator 50% of the time</li>
+                            <li><strong>Mode Collapse:</strong> Generator might focus on limited data modes</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="visualization">
+                    <h3>Adversarial Game</h3>
+                    <div class="architecture-viz">
+                        <div class="component-box" style="border-color: #ff9ff3;" onclick="explainGANComponent('generator')">
+                            <h4>🎨 Generator</h4>
+                            <p>Create fake data</p>
+                        </div>
+                        <div class="component-box" style="border-color: #feca57;" onclick="explainGANComponent('discriminator')">
+                            <h4>🕵️ Discriminator</h4>
+                            <p>Detect fake data</p>
+                        </div>
+                    </div>
+                    <div class="status-message" id="ganStatus">
+                        Click on Generator or Discriminator to learn their strategies!
+                    </div>
+                </div>
+            </div>
+
+            <div id="gan-math" class="tab-content">
+                <div class="content-grid">
+                    <div class="content-card">
+                        <h3>🎯 GAN Objective Function</h3>
+                        <p>GANs optimize a minimax objective where generator minimizes what discriminator maximizes.</p>
+                        
+                        <div class="math-equation">
+                            min_G max_D V(D,G) = E_x[log D(x)] + E_z[log(1-D(G(z)))]
+                        </div>
+                        
+                        <div class="formula-explanation">
+                            <strong>Interpretation:</strong><br>
+                            • First term: Discriminator correctly identifies real data<br>
+                            • Second term: Discriminator correctly identifies fake data<br>
+                            • Generator wants to maximize second term (fool discriminator)
+                        </div>
+                    </div>
+                    
+                    <div class="content-card">
+                        <h3>🔄 Training Algorithm</h3>
+                        
+                        <h4>Discriminator Update:</h4>
+                        <div class="math-equation">
+                            ∇_θd [E_x[log D(x)] + E_z[log(1-D(G(z)))]]
+                        </div>
+                        
+                        <h4>Generator Update:</h4>
+                        <div class="math-equation">
+                            ∇_θg E_z[log(1-D(G(z)))]
+                        </div>
+                        
+                        <div class="formula-explanation">
+                            In practice, we often use: ∇_θg E_z[-log D(G(z))] for better gradients
+                        </div>
+                    </div>
+                </div>
+
+                <div class="interactive-demo">
+                    <h3>📊 Loss Dynamics</h3>
+                    <button class="btn" onclick="simulateGANTraining()">Simulate GAN Training</button>
+                    <div id="ganLosses" class="demo-area">
+                        <p>Generator Loss: --</p>
+                        <p>Discriminator Loss: --</p>
+                        <p>Training Status: Ready</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="gan-demo" class="tab-content">
+                <div class="interactive-demo">
+                    <h3>🎮 GAN Playground</h3>
+                    
+                    <div class="content-grid">
+                        <div class="content-card">
+                            <h4>Generation Controls</h4>
+                            <button class="btn" onclick="generateGANSample()">Generate Random Sample</button>
+                            <button class="btn" onclick="interpolateGAN()">Interpolate Samples</button>
+                            <div id="ganOutput" class="generation-output">
+                                Click generate to create samples from noise!
+                            </div>
+                        </div>
+                        
+                        <div class="content-card">
+                            <h4>Discriminator Testing</h4>
+                            <button class="btn" onclick="testOnReal()">Test on Real Data</button>
+                            <button class="btn" onclick="testOnFake()">Test on Fake Data</button>
+                            <div id="discriminatorTest" class="generation-output">
+                                Test discriminator's detection abilities!
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="content-card">
+                        <h4>Adversarial Training</h4>
+                        <button class="btn" onclick="startGANBattle()">Start Adversarial Battle</button>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="ganProgress"></div>
+                        </div>
+                        <div id="battleStatus" class="status-message">
+                            Ready for adversarial training!
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- GPT Section -->
+        <div id="gpt" class="section">
+            <h2>🤖 Generative Pre-trained Transformers (GPT)</h2>
+            
+            <div class="highlight-box">
+                <h3>Autoregressive language modeling at scale!</h3>
+                <p>GPT revolutionized NLP by showing that large-scale autoregressive language modeling on diverse text can create powerful, general-purpose language understanding and generation capabilities.</p>
+            </div>
+
+            <div class="tabs">
+                <div class="tab active" onclick="showTab('gpt', 'architecture', this)">Architecture</div>
+                <div class="tab" onclick="showTab('gpt', 'training', this)">Training Process</div>
+                <div class="tab" onclick="showTab('gpt', 'demo', this)">Text Generation</div>
+            </div>
+
+            <div id="gpt-architecture" class="tab-content active">
+                <div class="content-grid">
+                    <div class="content-card">
+                        <h3>🏗️ GPT Architecture</h3>
+                        <p>GPT uses a decoder-only transformer architecture with causal (masked) self-attention to predict next tokens autoregressively.</p>
+                        
+                        <div class="math-equation">
+                            P(x_t|x_1,...,x_{t-1}) = softmax(W_e h_t + b_e)
+                        </div>
+                        
+                        <div class="formula-explanation">
+                            <strong>Key Components:</strong><br>
+                            • Causal self-attention (can only attend to previous tokens)<br>
+                            • Position embeddings for sequence order<br>
+                            • Layer normalization and residual connections<br>
+                            • Large vocabulary prediction head
+                        </div>
+                    </div>
+                    
+                    <div class="content-card">
+                        <h3>🎯 Scaling Laws</h3>
+                        <ul>
+                            <li><strong>Model Size:</strong> Parameters from 117M (GPT-1) to 175B+ (GPT-3)</li>
+                            <li><strong>Training Data:</strong> Diverse internet text, books, articles</li>
+                            <li><strong>Context Length:</strong> From 512 to 2048+ tokens</li>
+                            <li><strong>Emergent Abilities:</strong> Few-shot learning, reasoning, code generation</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="visualization">
+                    <h3>Token Processing Flow</h3>
+                    <div class="demo-area">
+                        <div id="tokenFlow" class="status-message">
+                            Tokens: "Once" → "upon" → "a" → "time" → [PREDICT NEXT]
+                        </div>
+                        <button class="btn" onclick="demonstrateTokenFlow()">Show Token Processing</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="gpt-training" class="tab-content">
+                <div class="content-grid">
+                    <div class="content-card">
+                        <h3>📚 Pre-training Objective</h3>
+                        <p>GPT is trained with a simple but powerful objective: predict the next token given all previous tokens.</p>
+                        
+                        <div class="math-equation">
+                            L = -Σ log P(x_t | x_1, ..., x_{t-1})
+                        </div>
+                        
+                        <div class="formula-explanation">
+                            This simple objective leads to rich representations and emergent capabilities
+                        </div>
+
+                        <h4>Training Stages:</h4>
+                        <ol>
+                            <li><strong>Pre-training:</strong> Learn from massive text corpus</li>
+                            <li><strong>Instruction Tuning:</strong> Follow human instructions</li>
+                            <li><strong>RLHF:</strong> Align with human preferences</li>
+                        </ol>
+                    </div>
+                    
+                    <div class="content-card">
+                        <h3>🔄 Fine-tuning Strategies</h3>
+                        
+                        <h4>Few-shot Learning:</h4>
+                        <p>Provide examples in the prompt without updating weights</p>
+                        
+                        <h4>Instruction Following:</h4>
+                        <div class="math-equation">
+                            "Instruction: ... Input: ... Output: ..."
+                        </div>
+                        
+                        <h4>RLHF Process:</h4>
+                        <ol>
+                            <li>Collect human preference data</li>
+                            <li>Train reward model</li>
+                            <li>Optimize policy with PPO</li>
+                        </ol>
+                    </div>
+                </div>
+
+                <div class="interactive-demo">
+                    <h3>📈 Training Pipeline</h3>
+                    <div class="controls">
+                        <button class="btn" onclick="startGPTPretraining()">Start Pre-training</button>
+                        <button class="btn" onclick="startGPTFinetuning()">Fine-tune</button>
+                        <button class="btn" onclick="applyRLHF()">Apply RLHF</button>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="gptProgress"></div>
+                    </div>
+                    <div id="gptTrainingStatus" class="status-message">
+                        Ready to start training pipeline!
+                    </div>
+                </div>
+            </div>
+
+            <div id="gpt-demo" class="tab-content">
+                <div class="interactive-demo">
+                    <h3>🎮 GPT Text Generation</h3>
+                    
+                    <div class="content-grid">
+                        <div class="content-card">
+                            <h4>Text Generation</h4>
+                            <textarea id="gptPrompt" rows="3" style="width: 100%; background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.2); border-radius: 5px; padding: 1rem;" placeholder="Enter your prompt...">Once upon a time in a magical kingdom</textarea>
+                            <div class="controls">
+                                <button class="btn" onclick="generateGPTText()">Generate</button>
+                                <button class="btn" onclick="continueGPTText()">Continue</button>
+                            </div>
+                            <div id="gptOutput" class="generation-output">
+                                Generated text will appear here...
+                            </div>
+                        </div>
+                        
+                        <div class="content-card">
+                            <h4>Generation Controls</h4>
+                            <div class="controls">
+                                <div class="control-group">
+                                    <label>Temperature</label>
+                                    <input type="range" class="slider" id="temperature" min="0.1" max="2" step="0.1" value="1" onchange="updateTemperature()">
+                                    <span id="tempValue">1.0</span>
+                                </div>
+                                <div class="control-group">
+                                    <label>Max Length</label>
+                                    <input type="range" class="slider" id="maxLength" min="50" max="500" value="150" onchange="updateMaxLength()">
+                                    <span id="maxLenValue">150</span>
+                                </div>
+                            </div>
+                            
+                            <h5>Quick Prompts:</h5>
+                            <button class="btn" onclick="loadPrompt('story')">Story</button>
+                            <button class="btn" onclick="loadPrompt('explain')">Explain</button>
+                            <button class="btn" onclick="loadPrompt('code')">Code</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- BERT Section -->
+        <div id="bert" class="section">
+            <h2>🔍 BERT (Bidirectional Encoder Representations)</h2>
+            
+            <div class="highlight-box">
+                <h3>Bidirectional context understanding!</h3>
+                <p>BERT revolutionized NLP by training bidirectional representations through masked language modeling, enabling deep understanding of context from both directions.</p>
+            </div>
+
+            <div class="tabs">
+                <div class="tab active" onclick="showTab('bert', 'architecture', this)">Architecture</div>
+                <div class="tab" onclick="showTab('bert', 'pretraining', this)">Pre-training</div>
+                <div class="tab" onclick="showTab('bert', 'demo', this)">Applications</div>
+            </div>
+
+            <div id="bert-architecture" class="tab-content active">
+                <div class="content-grid">
+                    <div class="content-card">
+                        <h3>🏗️ BERT Architecture</h3>
+                        <p>BERT uses an encoder-only transformer with bidirectional self-attention, allowing each token to attend to all other tokens in the sequence.</p>
+                        
+                        <div class="math-equation">
+                            h_i = Attention(Q_i, K, V) where K,V include all positions
+                        </div>
+                        
+                        <div class="formula-explanation">
+                            <strong>Key Differences from GPT:</strong><br>
+                            • Bidirectional attention (no causal mask)<br>
+                            • Encoder-only architecture<br>
+                            • Trained with masked language modeling<br>
+                            • Next sentence prediction task
+                        </div>
+                    </div>
+                    
+                    <div class="content-card">
+                        <h3>🎯 Model Variants</h3>
+                        <ul>
+                            <li><strong>BERT-Base:</strong> 12 layers, 768 hidden, 110M parameters</li>
+                            <li><strong>BERT-Large:</strong> 24 layers, 1024 hidden, 340M parameters</li>
+                            <li><strong>RoBERTa:</strong> Optimized training (no NSP, longer sequences)</li>
+                            <li><strong>DistilBERT:</strong> Smaller, faster version via distillation</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="visualization">
+                    <h3>Bidirectional Attention</h3>
+                    <div class="demo-area">
+                        <div class="status-message">
+                            Input: "The cat [MASK] on the mat"<br>
+                            Each token can attend to ALL other tokens!
+                        </div>
+                        <button class="btn" onclick="showBERTAttention()">Show Attention Pattern</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="bert-pretraining" class="tab-content">
+                <div class="content-grid">
+                    <div class="content-card">
+                        <h3>🎭 Masked Language Modeling (MLM)</h3>
+                        <p>BERT randomly masks 15% of tokens and learns to predict them using bidirectional context.</p>
+                        
+                        <div class="math-equation">
+                            L_MLM = -Σ log P(x_i | x_masked)
+                        </div>
+                        
+                        <div class="formula-explanation">
+                            <strong>Masking Strategy:</strong><br>
+                            • 80% of time: Replace with [MASK]<br>
+                            • 10% of time: Replace with random token<br>
+                            • 10% of time: Keep original token
+                        </div>
+                    </div>
+                    
+                    <div class="content-card">
+                        <h3>📝 Next Sentence Prediction (NSP)</h3>
+                        <p>BERT learns to predict if sentence B follows sentence A, helping with sentence-level understanding.</p>
+                        
+                        <div class="math-equation">
+                            P(IsNext | [CLS]) = softmax(W[CLS])
+                        </div>
+                        
+                        <div class="formula-explanation">
+                            Input format: [CLS] Sentence A [SEP] Sentence B [SEP]<br>
+                            50% real pairs, 50% random pairs
+                        </div>
+                    </div>
+                </div>
+
+                <div class="interactive-demo">
+                    <h3>🎭 MLM Interactive Demo</h3>
+                    <div class="demo-area">
+                        <p id="mlmSentence">"The quick [MASK] fox jumps over the [MASK] dog"</p>
+                        <button class="btn" onclick="predictMasked()">Predict Masked Tokens</button>
+                        <button class="btn" onclick="newMaskedSentence()">New Sentence</button>
+                        <div id="mlmPredictions" class="status-message">
+                            Click predict to see BERT's predictions!
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="bert-demo" class="tab-content">
+                <div class="interactive-demo">
+                    <h3>🎮 BERT Applications</h3>
+                    
+                    <div class="content-grid">
+                        <div class="content-card">
+                            <h4>Task Selection</h4>
+                            <button class="btn" onclick="loadBERTTask('sentiment')">Sentiment Analysis</button>
+                            <button class="btn" onclick="loadBERTTask('qa')">Question Answering</button>
+                            <button class="btn" onclick="loadBERTTask('ner')">Named Entity Recognition</button>
+                            
+                            <div id="bertTaskDesc" class="status-message">
+                                Select a task to see how BERT can be fine-tuned!
+                            </div>
+                        </div>
+                        
+                        <div class="content-card">
+                            <h4>Input Interface</h4>
+                            <textarea id="bertInput" rows="4" style="width: 100%; background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.2); border-radius: 5px; padding: 1rem;" placeholder="Enter text for analysis...">This movie is absolutely fantastic! I loved every minute of it.</textarea>
+                            <button class="btn" onclick="processBERTInput()">Process with BERT</button>
+                            <div id="bertResult" class="generation-output">
+                                Results will appear here...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ReAct Agents Section -->
+        <div id="react" class="section">
+            <h2>🤔 ReAct Agents (Reasoning + Acting)</h2>
+            
+            <div class="highlight-box">
+                <h3>AI agents that reason and act in the world!</h3>
+                <p>ReAct combines reasoning traces with action execution, enabling language models to interact with external tools, gather information, and solve complex multi-step problems.</p>
+            </div>
+
+            <div class="tabs">
+                <div class="tab active" onclick="showTab('react', 'framework', this)">Framework</div>
+                <div class="tab" onclick="showTab('react', 'workflow', this)">Workflow</div>
+                <div class="tab" onclick="showTab('react', 'demo', this)">Agent Demo</div>
+            </div>
+
+            <div id="react-framework" class="tab-content active">
+                <div class="content-grid">
+                    <div class="content-card">
+                        <h3>🧠 ReAct Framework</h3>
+                        <p>ReAct interleaves reasoning traces (thoughts) with actions, creating a synergistic loop of thinking and acting.</p>
+                        
+                        <div class="math-equation">
+                            ReAct = Reasoning Traces + Action Execution
+                        </div>
+                        
+                        <div class="formula-explanation">
+                            <strong>Key Components:</strong><br>
+                            • Thought: Internal reasoning step<br>
+                            • Action: External tool/environment interaction<br>
+                            • Observation: Feedback from environment<br>
+                            • Reflection: Learning from outcomes
+                        </div>
+                    </div>
+                    
+                    <div class="content-card">
+                        <h3>🎯 Advantages</h3>
+                        <ul>
+                            <li><strong>Interpretability:</strong> Explicit reasoning traces</li>
+                            <li><strong>Reliability:</strong> Can gather additional information</li>
+                            <li><strong>Flexibility:</strong> Adapts to different environments</li>
+                            <li><strong>Composability:</strong> Combines multiple tools and skills</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="visualization">
+                    <h3>ReAct Cycle</h3>
+                    <div class="architecture-viz">
+                        <div class="component-box" style="border-color: #ff6b6b;" onclick="explainReActStep('thought')">
+                            <h4>💭 Thought</h4>
+                            <p>Internal reasoning</p>
+                        </div>
+                        <div class="flow-arrow">→</div>
+                        <div class="component-box" style="border-color: #4ecdc4;" onclick="explainReActStep('action')">
+                            <h4>🔧 Action</h4>
+                            <p>Tool execution</p>
+                        </div>
+                        <div class="flow-arrow">→</div>
+                        <div class="component-box" style="border-color: #45b7d1;" onclick="explainReActStep('observation')">
+                            <h4>👁️ Observation</h4>
+                            <p>Environment feedback</p>
+                        </div>
+                    </div>
+                    <div class="status-message" id="reactStatus">
+                        Click components to learn about each step in the ReAct cycle!
+                    </div>
+                </div>
+            </div>
+
+            <div id="react-workflow" class="tab-content">
+                <div class="content-grid">
+                    <div class="content-card">
+                        <h3>🔄 Workflow Pattern</h3>
+                        <p>ReAct follows a structured pattern of interleaving thoughts and actions:</p>
+                        
+                        <div class="math-equation">
+                            Thought₁ → Action₁ → Observation₁ → ... → Answer
+                        </div>
+                        
+                        <h4>Example Trace:</h4>
+                        <div class="demo-area" style="font-family: monospace; font-size: 0.9rem;">
+                            Question: What is the capital of France?<br>
+                            Thought 1: I need to find the capital of France.<br>
+                            Action 1: Search[capital of France]<br>
+                            Observation 1: Paris is the capital of France.<br>
+                            Answer: Paris is the capital of France.
+                        </div>
+                    </div>
+                    
+                    <div class="content-card">
+                        <h3>🛠️ Available Tools</h3>
+                        <ul>
+                            <li><strong>Search:</strong> Find information online</li>
+                            <li><strong>Calculate:</strong> Perform mathematical operations</li>
+                            <li><strong>Weather:</strong> Get weather information</li>
+                            <li><strong>Translate:</strong> Translate between languages</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="interactive-demo">
+                    <h3>🤖 Agent Workflow</h3>
+                    <button class="btn" onclick="simulateAgentWorkflow()">Simulate Agent Problem Solving</button>
+                    <div id="workflowTrace" class="generation-output">
+                        Agent execution trace will appear here...
+                    </div>
+                </div>
+            </div>
+
+            <div id="react-demo" class="tab-content">
+                <div class="interactive-demo">
+                    <h3>🎮 ReAct Agent Playground</h3>
+                    
+                    <div class="content-grid">
+                        <div class="content-card">
+                            <h4>Problem Input</h4>
+                            <textarea id="agentProblem" rows="4" style="width: 100%; background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.2); border-radius: 5px; padding: 1rem;" placeholder="Enter a problem for the agent...">What is the population of the largest city in Japan?</textarea>
+                            <button class="btn" onclick="deployAgent()">Deploy Agent</button>
+                        </div>
+                        
+                        <div class="content-card">
+                            <h4>Quick Challenges</h4>
+                            <button class="btn" onclick="loadChallenge('math')">Math Problem</button>
+                            <button class="btn" onclick="loadChallenge('research')">Research Task</button>
+                            <button class="btn" onclick="loadChallenge('weather')">Weather Query</button>
+                        </div>
+                    </div>
+                    
+                    <div class="content-card">
+                        <h4>Agent Execution</h4>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="agentProgress"></div>
+                        </div>
+                        <div id="agentTrace" class="generation-output">
+                            Deploy an agent to see the execution trace...
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let currentSection = 'vae';
+        let animationRunning = false;
+
+        // Navigation functions
+        function showSection(sectionId) {
+            try {
+                console.log('Switching to section:', sectionId);
+                
+                // Hide all sections
+                document.querySelectorAll('.section').forEach(section => {
+                    section.classList.remove('active');
+                });
+                
+                // Show selected section
+                const targetSection = document.getElementById(sectionId);
+                if (targetSection) {
+                    targetSection.classList.add('active');
+                }
+                
+                // Update nav buttons
+                document.querySelectorAll('.nav-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                
+                // Find and activate the clicked button
+                event.target.classList.add('active');
+                
+                currentSection = sectionId;
+                
+            } catch (error) {
+                console.error('Error in showSection:', error);
+            }
+        }
+
+        function showTab(section, tabId, element) {
+            try {
+                console.log('Switching to tab:', section, tabId);
+                
+                // Hide all tab contents for this section
+                document.querySelectorAll(`#${section} .tab-content`).forEach(content => {
+                    content.classList.remove('active');
+                });
+                
+                // Show selected tab content
+                const targetContent = document.getElementById(`${section}-${tabId}`);
+                if (targetContent) {
+                    targetContent.classList.add('active');
+                }
+                
+                // Update tab buttons
+                document.querySelectorAll(`#${section} .tab`).forEach(tab => {
+                    tab.classList.remove('active');
+                });
+                if (element) {
+                    element.classList.add('active');
+                }
+                
+            } catch (error) {
+                console.error('Error in showTab:', error);
+            }
+        }
+
+        // VAE Functions
+        function explainComponent(component) {
+            const explanations = {
+                'encoder': 'The encoder maps input data x to latent parameters μ and σ, defining a probability distribution in latent space.',
+                'sampling': 'The reparameterization trick: z = μ + σ⊙ε allows gradients to flow through the stochastic sampling step.',
+                'decoder': 'The decoder reconstructs data from latent codes z, learning to map from latent space back to data space.'
+            };
+            
+            document.getElementById('vaeStatus').textContent = explanations[component] || 'Click components to learn more!';
+        }
+
+        function updateBeta() {
+            const beta = document.getElementById('betaParam').value;
+            document.getElementById('betaValue').textContent = beta;
+            
+            const recon = 0.234;
+            const kl = 0.156;
+            const total = recon + parseFloat(beta) * kl;
+            
+            document.getElementById('lossVisualization').innerHTML = `
+                <p>Reconstruction Loss: ${recon.toFixed(3)}</p>
+                <p>KL Loss: ${kl.toFixed(3)}</p>
+                <p>β Parameter: ${beta}</p>
+                <p>Total Loss: ${total.toFixed(3)}</p>
+                <p>${beta > 5 ? '⚠️ High β enforces strong regularization!' : beta < 0.5 ? '⚠️ Low β may lead to poor latent structure!' : '✅ Balanced trade-off'}</p>
+            `;
+        }
+
+        function updateLatent() {
+            const lat1 = document.getElementById('latent1').value;
+            const lat2 = document.getElementById('latent2').value;
+            document.getElementById('latent1Value').textContent = lat1;
+            document.getElementById('latent2Value').textContent = lat2;
+        }
+
+        function generateFromLatent() {
+            const lat1 = document.getElementById('latent1').value;
+            const lat2 = document.getElementById('latent2').value;
+            
+            document.getElementById('generatedSample').textContent = `Generated sample from latent coordinates (${lat1}, ${lat2}):\n\n🎨 This represents data decoded from the specified point in latent space.\n\nIn a real VAE, this would be an actual image, text, or other data type!`;
+        }
+
+        function startVAETraining() {
+            if (animationRunning) return;
+            animationRunning = true;
+            
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += 5;
+                document.getElementById('vaeProgress').style.width = progress + '%';
+                
+                const epoch = Math.floor(progress / 5);
+                const reconLoss = (2.5 - progress / 50).toFixed(3);
+                const klLoss = (0.5 + Math.sin(progress / 20) * 0.1).toFixed(3);
+                
+                document.getElementById('trainingStatus').innerHTML = `Training Epoch ${epoch}/20<br>Reconstruction Loss: ${reconLoss}<br>KL Loss: ${klLoss}`;
+                
+                if (progress >= 100) {
+                    clearInterval(interval);
+                    animationRunning = false;
+                    document.getElementById('trainingStatus').innerHTML = '✅ Training Complete!<br>VAE successfully learned data distribution!';
+                }
+            }, 200);
+        }
+
+        function resetVAETraining() {
+            animationRunning = false;
+            document.getElementById('vaeProgress').style.width = '0%';
+            document.getElementById('trainingStatus').textContent = 'Ready to start VAE training!';
+        }
+
+        // GAN Functions
+        function explainGANComponent(component) {
+            const explanations = {
+                'generator': 'The Generator creates fake data from random noise, trying to fool the discriminator into thinking its outputs are real.',
+                'discriminator': 'The Discriminator tries to distinguish between real and fake data, providing training signal to improve the generator.'
+            };
+            
+            document.getElementById('ganStatus').textContent = explanations[component] || 'Click on Generator or Discriminator to learn more!';
+        }
+
+        function simulateGANTraining() {
+            let genLoss = 2.5;
+            let discLoss = 0.3;
+            let step = 0;
+            
+            const interval = setInterval(() => {
+                step++;
+                genLoss = Math.max(0.5, genLoss - 0.05 + (Math.random() - 0.5) * 0.2);
+                discLoss = Math.max(0.3, discLoss + 0.02 + (Math.random() - 0.5) * 0.1);
+                
+                document.getElementById('ganLosses').innerHTML = `
+                    <p>Step: ${step}</p>
+                    <p>Generator Loss: ${genLoss.toFixed(3)}</p>
+                    <p>Discriminator Loss: ${discLoss.toFixed(3)}</p>
+                    <p>Status: ${step > 15 ? '⚖️ Approaching Nash Equilibrium' : '⚔️ Adversarial Training'}</p>
+                `;
+                
+                if (step >= 20) {
+                    clearInterval(interval);
+                }
+            }, 300);
+        }
+
+        function generateGANSample() {
+            const samples = ['🖼️ Realistic face', '🎨 Abstract art', '🏞️ Landscape', '🐱 Cute animal'];
+            const sample = samples[Math.floor(Math.random() * samples.length)];
+            
+            document.getElementById('ganOutput').textContent = `Random noise vector → Generator → ${sample} generated!\n\nThe generator has learned to map from noise to realistic data.`;
+        }
+
+        function interpolateGAN() {
+            document.getElementById('ganOutput').textContent = 'Interpolating between two samples:\n\nSample A → 25% blend → 50% blend → 75% blend → Sample B\n\n✨ Smooth transitions demonstrate the continuous nature of the generator\'s learned mapping!';
+        }
+
+        function testOnReal() {
+            const confidence = (0.7 + Math.random() * 0.25).toFixed(3);
+            document.getElementById('discriminatorTest').textContent = `Testing on REAL data:\n\nDiscriminator output: ${confidence}\nPrediction: REAL ✅\nConfidence: High\n\nDiscriminator correctly identified real data!`;
+        }
+
+        function testOnFake() {
+            const confidence = (0.1 + Math.random() * 0.3).toFixed(3);
+            document.getElementById('discriminatorTest').textContent = `Testing on FAKE data:\n\nDiscriminator output: ${confidence}\nPrediction: FAKE ✅\nConfidence: High\n\nDiscriminator successfully detected generated data!`;
+        }
+
+        function startGANBattle() {
+            if (animationRunning) return;
+            animationRunning = true;
+            
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += 4;
+                document.getElementById('ganProgress').style.width = progress + '%';
+                
+                const round = Math.floor(progress / 4);
+                document.getElementById('battleStatus').innerHTML = `Round ${round}/25: Generator vs Discriminator<br>${progress > 80 ? '🏆 Reaching Nash Equilibrium!' : '⚔️ Adversarial Battle!'}`;
+                
+                if (progress >= 100) {
+                    clearInterval(interval);
+                    animationRunning = false;
+                    document.getElementById('battleStatus').innerHTML = '🎯 Training Complete!<br>Generator and Discriminator have reached equilibrium!';
+                }
+            }, 200);
+        }
+
+        // GPT Functions
+        function demonstrateTokenFlow() {
+            document.getElementById('tokenFlow').innerHTML = 'Processing: "Once" → "upon" → "a" → "time" → Predicting: "in"<br>Each token attends only to previous tokens (causal attention)';
+        }
+
+        function startGPTPretraining() {
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += 10;
+                document.getElementById('gptProgress').style.width = progress + '%';
+                document.getElementById('gptTrainingStatus').innerHTML = `Pre-training: ${progress}%<br>Learning from massive text corpus...`;
+                
+                if (progress >= 100) {
+                    clearInterval(interval);
+                    document.getElementById('gptTrainingStatus').innerHTML = '✅ Pre-training complete!<br>Model has learned rich language representations.';
+                }
+            }, 300);
+        }
+
+        function startGPTFinetuning() {
+            document.getElementById('gptTrainingStatus').innerHTML = '🎯 Fine-tuning on instruction-following tasks...<br>Teaching model to follow human instructions.';
+        }
+
+        function applyRLHF() {
+            document.getElementById('gptTrainingStatus').innerHTML = '🤝 Applying RLHF...<br>Aligning model with human preferences and values.';
+        }
+
+        function updateTemperature() {
+            const temp = document.getElementById('temperature').value;
+            document.getElementById('tempValue').textContent = temp;
+        }
+
+        function updateMaxLength() {
+            const len = document.getElementById('maxLength').value;
+            document.getElementById('maxLenValue').textContent = len;
+        }
+
+        function generateGPTText() {
+            const prompt = document.getElementById('gptPrompt').value;
+            const temp = document.getElementById('temperature').value;
+            
+            const continuations = [
+                ', there lived a wise old wizard who possessed magical powers.',
+                ', scientists discovered a new form of energy that changed everything.',
+                ', the inhabitants developed an advanced civilization.',
+                ', a young hero embarked on an epic quest to save the world.'
+            ];
+            
+            const continuation = continuations[Math.floor(Math.random() * continuations.length)];
+            const tempNote = temp > 1.5 ? ' (High temperature: creative/random)' : temp < 0.5 ? ' (Low temperature: focused/deterministic)' : '';
+            
+            document.getElementById('gptOutput').textContent = prompt + continuation + tempNote;
+        }
+
+        function continueGPTText() {
+            const current = document.getElementById('gptOutput').textContent;
+            const extensions = [
+                ' The adventure was just beginning.',
+                ' Little did they know what lay ahead.',
+                ' This was only the start of their journey.',
+                ' Amazing discoveries awaited them.'
+            ];
+            
+            const extension = extensions[Math.floor(Math.random() * extensions.length)];
+            document.getElementById('gptOutput').textContent = current + extension;
+        }
+
+        function loadPrompt(type) {
+            const prompts = {
+                'story': 'Write a short story about a robot who discovers emotions',
+                'explain': 'Explain quantum computing in simple terms',
+                'code': 'Write a Python function to calculate fibonacci numbers'
+            };
+            
+            document.getElementById('gptPrompt').value = prompts[type] || '';
+        }
+
+        // BERT Functions
+        function showBERTAttention() {
+            document.querySelector('#bert-architecture .demo-area .status-message').innerHTML = 
+                'Attention Pattern Visualization:<br><br>' +
+                '🔵 "The" attends to → "cat", "mat"<br>' +
+                '🔴 "cat" attends to → "The", "[MASK]", "on"<br>' +
+                '🟢 "[MASK]" attends to → ALL tokens (bidirectional!)<br><br>' +
+                'Unlike GPT, BERT can see the full context when predicting masked tokens!';
+        }
+
+        function predictMasked() {
+            document.getElementById('mlmPredictions').innerHTML = 
+                'BERT Predictions:<br><br>' +
+                '🎯 [MASK] 1: "brown" (confidence: 0.89)<br>' +
+                '🎯 [MASK] 2: "lazy" (confidence: 0.76)<br><br>' +
+                'BERT uses bidirectional context to make accurate predictions!';
+        }
+
+        function newMaskedSentence() {
+            const sentences = [
+                '"The weather is [MASK] today"',
+                '"I love eating [MASK] for breakfast"',
+                '"The [MASK] is shining brightly"',
+                '"She walked to the [MASK] yesterday"'
+            ];
+            
+            const sentence = sentences[Math.floor(Math.random() * sentences.length)];
+            document.getElementById('mlmSentence').textContent = sentence;
+            document.getElementById('mlmPredictions').textContent = 'Click predict to see BERT\'s predictions!';
+        }
+
+        function loadBERTTask(task) {
+            const descriptions = {
+                'sentiment': 'Sentiment Analysis: Classify text as positive, negative, or neutral sentiment.',
+                'qa': 'Question Answering: Find answers to questions within given text passages.',
+                'ner': 'Named Entity Recognition: Identify and classify named entities (people, places, organizations).'
+            };
+            
+            document.getElementById('bertTaskDesc').textContent = descriptions[task] || 'Select a task to see how BERT can be applied!';
+        }
+
+        function processBERTInput() {
+            const input = document.getElementById('bertInput').value;
+            const results = {
+                'sentiment': `Sentiment: POSITIVE (confidence: 0.94)\nThis text expresses strong positive sentiment with words like "fantastic" and "loved".`,
+                'qa': `Answer extraction: "fantastic movie"\nConfidence: 0.89\nBERT identified the key information in the text.`,
+                'ner': `Named Entities Found:\n• No person names detected\n• No locations detected\n• No organizations detected\nThis text contains general language without specific named entities.`
+            };
+            
+            const currentTask = document.getElementById('bertTaskDesc').textContent.includes('Sentiment') ? 'sentiment' : 
+                               document.getElementById('bertTaskDesc').textContent.includes('Question') ? 'qa' : 'ner';
+            
+            document.getElementById('bertResult').textContent = results[currentTask] || 'Please select a task first!';
+        }
+
+        // ReAct Functions
+        function explainReActStep(step) {
+            const explanations = {
+                'thought': 'Thought: The agent reasons about the problem and plans its next action based on current information.',
+                'action': 'Action: The agent executes a specific tool or action to gather information or perform a task.',
+                'observation': 'Observation: The agent receives feedback from the environment or tool execution.'
+            };
+            
+            document.getElementById('reactStatus').textContent = explanations[step] || 'Click components to learn about each step!';
+        }
+
+        function simulateAgentWorkflow() {
+            const trace = `Agent Problem-Solving Trace:
+
+Question: "What is the weather like in Tokyo today?"
+
+Thought 1: I need to get current weather information for Tokyo.
+Action 1: Weather[Tokyo]
+Observation 1: Tokyo: 22°C, Sunny, Light breeze
+
+Thought 2: I have the current weather information for Tokyo.
+Answer: The weather in Tokyo today is sunny with a temperature of 22°C and a light breeze.
+
+✅ Problem solved successfully!`;
+
+            document.getElementById('workflowTrace').textContent = trace;
+        }
+
+        function deployAgent() {
+            const problem = document.getElementById('agentProblem').value;
+            
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += 20;
+                document.getElementById('agentProgress').style.width = progress + '%';
+                
+                const traces = [
+                    'Thought 1: I need to understand this problem...',
+                    'Action 1: Search[largest city Japan]',
+                    'Observation 1: Tokyo is the largest city in Japan',
+                    'Thought 2: Now I need the population of Tokyo...',
+                    'Action 2: Search[Tokyo population]',
+                    'Observation 2: Tokyo has approximately 37 million people',
+                    'Answer: Tokyo, the largest city in Japan, has a population of approximately 37 million people.'
+                ];
+                
+                if (progress <= 100) {
+                    const step = Math.floor(progress / 20) - 1;
+                    if (step >= 0 && step < traces.length) {
+                        document.getElementById('agentTrace').textContent = traces.slice(0, step + 1).join('\n\n');
+                    }
+                }
+                
+                if (progress >= 140) {
+                    clearInterval(interval);
+                }
+            }, 800);
+        }
+
+        function loadChallenge(type) {
+            const challenges = {
+                'math': 'If I have $500 and spend 30% on groceries and 25% on utilities, how much money do I have left?',
+                'research': 'What are the main differences between renewable and non-renewable energy sources?',
+                'weather': 'What will the weather be like in London this weekend?'
+            };
+            
+            document.getElementById('agentProblem').value = challenges[type] || '';
+        }
+
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Advanced AI Guide loaded successfully!');
+            
+            // Initialize default values
+            updateBeta();
+            updateLatent();
+            updateTemperature();
+            updateMaxLength();
+        });
+
+        // Handle slider updates
+        document.addEventListener('input', function(e) {
+            if (e.target.type === 'range') {
+                const valueSpan = document.getElementById(e.target.id + 'Value');
+                if (valueSpan) {
+                    valueSpan.textContent = e.target.value;
+                }
+            }
+        });
+    </script>
+</body>
+</html>
