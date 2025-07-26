@@ -547,6 +547,14 @@
             document.getElementById(sectionId).scrollIntoView({ behavior: 'smooth' });
         }
 
+        // Ensure DOM is loaded before adding event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize with a default demo
+            setTimeout(() => {
+                demoLogisticRegression();
+            }, 500);
+        });
+
         function generateSampleData(algorithm) {
             const data = [];
             const labels = [];
@@ -578,7 +586,11 @@
         }
 
         function createScatterChart(data, labels, title) {
-            const ctx = document.getElementById('algorithmChart').getContext('2d');
+            const ctx = document.getElementById('algorithmChart');
+            if (!ctx) {
+                console.error('Chart canvas not found');
+                return;
+            }
             
             if (currentChart) {
                 currentChart.destroy();
@@ -587,7 +599,7 @@
             const class0 = data.filter((_, i) => labels[i] === 0);
             const class1 = data.filter((_, i) => labels[i] === 1);
 
-            currentChart = new Chart(ctx, {
+            currentChart = new Chart(ctx.getContext('2d'), {
                 type: 'scatter',
                 data: {
                     datasets: [
@@ -698,11 +710,12 @@
 
         function demoRandomForest() {
             const accuracyData = [0.85, 0.92, 0.89, 0.94, 0.91];
-            const ctx = document.getElementById('algorithmChart').getContext('2d');
+            const ctx = document.getElementById('algorithmChart');
+            if (!ctx) return;
             
             if (currentChart) currentChart.destroy();
             
-            currentChart = new Chart(ctx, {
+            currentChart = new Chart(ctx.getContext('2d'), {
                 type: 'bar',
                 data: {
                     labels: ['Single Tree', 'RF (10 trees)', 'RF (50 trees)', 'RF (100 trees)', 'RF (200 trees)'],
@@ -741,11 +754,12 @@
 
         function demoAdaBoost() {
             const iterationData = [0.6, 0.72, 0.81, 0.87, 0.91, 0.93, 0.94];
-            const ctx = document.getElementById('algorithmChart').getContext('2d');
+            const ctx = document.getElementById('algorithmChart');
+            if (!ctx) return;
             
             if (currentChart) currentChart.destroy();
             
-            currentChart = new Chart(ctx, {
+            currentChart = new Chart(ctx.getContext('2d'), {
                 type: 'line',
                 data: {
                     labels: ['Iteration 1', 'Iteration 2', 'Iteration 3', 'Iteration 4', 'Iteration 5', 'Iteration 6', 'Iteration 7'],
@@ -790,11 +804,12 @@
                 speed: [0.95, 0.7, 0.6, 0.4, 0.8]
             };
             
-            const ctx = document.getElementById('algorithmChart').getContext('2d');
+            const ctx = document.getElementById('algorithmChart');
+            if (!ctx) return;
             
             if (currentChart) currentChart.destroy();
             
-            currentChart = new Chart(ctx, {
+            currentChart = new Chart(ctx.getContext('2d'), {
                 type: 'radar',
                 data: {
                     labels: comparisonData.algorithms,
@@ -849,11 +864,12 @@
                 performance: [0.85, 0.89, 0.91, 0.93]
             };
             
-            const ctx = document.getElementById('algorithmChart').getContext('2d');
+            const ctx = document.getElementById('algorithmChart');
+            if (!ctx) return;
             
             if (currentChart) currentChart.destroy();
             
-            currentChart = new Chart(ctx, {
+            currentChart = new Chart(ctx.getContext('2d'), {
                 type: 'bar',
                 data: {
                     labels: ensembleComparison.methods,
@@ -1116,6 +1132,20 @@ for ensemble in [hard_voting, soft_voting, stacking]:
         // Initialize with a default demo
         document.addEventListener('DOMContentLoaded', function() {
             demoLogisticRegression();
+        });
+
+        // Add click event listeners as backup
+        window.addEventListener('load', function() {
+            // Ensure all functions are globally available
+            window.demoLogisticRegression = demoLogisticRegression;
+            window.demoSVM = demoSVM;
+            window.demoNaiveBayes = demoNaiveBayes;
+            window.demoKNN = demoKNN;
+            window.demoRandomForest = demoRandomForest;
+            window.demoAdaBoost = demoAdaBoost;
+            window.demoXGBoost = demoXGBoost;
+            window.demoVoting = demoVoting;
+            window.showAlgorithmCode = showAlgorithmCode;
         });
     </script>
 </body>
