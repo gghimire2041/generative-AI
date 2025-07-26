@@ -1,0 +1,1122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Traditional AI & Machine Learning</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.11.0/math.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+            animation: fadeInDown 1s ease-out;
+        }
+
+        .title {
+            font-size: 3.5rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+            background: linear-gradient(45deg, #3498db, #e74c3c, #f39c12);
+            background-size: 200% 200%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: gradientShift 4s ease-in-out infinite;
+        }
+
+        .subtitle {
+            font-size: 1.3rem;
+            opacity: 0.9;
+            margin-bottom: 1rem;
+        }
+
+        .description {
+            font-size: 1.1rem;
+            opacity: 0.8;
+            max-width: 800px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        .algorithm-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .algorithm-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+            animation: fadeInUp 0.8s ease-out;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .algorithm-card:hover {
+            transform: translateY(-10px);
+            background: rgba(255, 255, 255, 0.15);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .algorithm-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        .algorithm-title {
+            font-size: 1.8rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+            color: #ecf0f1;
+        }
+
+        .algorithm-desc {
+            font-size: 1rem;
+            line-height: 1.6;
+            opacity: 0.9;
+            margin-bottom: 1.5rem;
+        }
+
+        .algorithm-features {
+            margin-bottom: 1.5rem;
+        }
+
+        .feature-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        .feature-icon {
+            margin-right: 0.5rem;
+            color: #3498db;
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #3498db, #2ecc71);
+            color: white;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-right: 1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(45deg, #e74c3c, #c0392b);
+        }
+
+        .demo-section {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 2rem;
+            margin: 2rem 0;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .demo-title {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: #3498db;
+        }
+
+        .chart-container {
+            width: 100%;
+            height: 400px;
+            margin: 1rem 0;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 1rem;
+        }
+
+        .code-block {
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            overflow-x: auto;
+            border-left: 4px solid #3498db;
+        }
+
+        .ensemble-section {
+            background: linear-gradient(135deg, rgba(155, 89, 182, 0.2), rgba(142, 68, 173, 0.2));
+            border-radius: 20px;
+            padding: 2.5rem;
+            margin: 3rem 0;
+            border: 1px solid rgba(155, 89, 182, 0.3);
+        }
+
+        .ensemble-title {
+            font-size: 2.5rem;
+            text-align: center;
+            margin-bottom: 2rem;
+            color: #e74c3c;
+        }
+
+        .ensemble-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 2rem;
+        }
+
+        .navigation {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+
+        .nav-btn {
+            background: rgba(52, 152, 219, 0.9);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 15px;
+            margin: 0.2rem;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        .nav-btn:hover {
+            background: rgba(52, 152, 219, 1);
+            transform: scale(1.05);
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes gradientShift {
+            0%, 100% {
+                background-position: 0% 50%;
+            }
+            50% {
+                background-position: 100% 50%;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .title {
+                font-size: 2.5rem;
+            }
+            
+            .algorithm-grid, .ensemble-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .chart-container {
+                height: 300px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="navigation">
+        <button class="nav-btn" onclick="window.location.href='index.html'">🏠 Home</button>
+        <button class="nav-btn" onclick="scrollToSection('classification')">📊 Classification</button>
+        <button class="nav-btn" onclick="scrollToSection('ensemble')">🎯 Ensemble</button>
+    </div>
+
+    <div class="container">
+        <div class="header">
+            <h1 class="title">🔬 Traditional AI & Machine Learning</h1>
+            <p class="subtitle">Master the Foundation of Artificial Intelligence</p>
+            <p class="description">
+                Explore the fundamental algorithms that laid the foundation for modern AI. From statistical classifiers 
+                to ensemble methods, understand the core techniques that power intelligent systems and discover 
+                how these time-tested approaches continue to drive innovation in machine learning.
+            </p>
+        </div>
+
+        <section id="classification">
+            <div class="algorithm-grid">
+                <div class="algorithm-card">
+                    <span class="algorithm-icon">📈</span>
+                    <h3 class="algorithm-title">Logistic Regression</h3>
+                    <p class="algorithm-desc">
+                        A fundamental statistical method for binary and multiclass classification using the logistic function 
+                        to model probabilities and create linear decision boundaries.
+                    </p>
+                    <div class="algorithm-features">
+                        <div class="feature-item">
+                            <span class="feature-icon">✓</span>
+                            <span>Fast training and prediction</span>
+                        </div>
+                        <div class="feature-item">
+                            <span class="feature-icon">✓</span>
+                            <span>Interpretable coefficients</span>
+                        </div>
+                        <div class="feature-item">
+                            <span class="feature-icon">✓</span>
+                            <span>Probability outputs</span>
+                        </div>
+                        <div class="feature-item">
+                            <span class="feature-icon">✓</span>
+                            <span>Handles continuous & categorical data</span>
+                        </div>
+                    </div>
+                    <button class="btn" onclick="demoLogisticRegression()">📊 Demo</button>
+                    <button class="btn btn-secondary" onclick="showAlgorithmCode('logistic')">💻 Code</button>
+                </div>
+
+                <div class="algorithm-card">
+                    <span class="algorithm-icon">🎯</span>
+                    <h3 class="algorithm-title">Support Vector Machine</h3>
+                    <p class="algorithm-desc">
+                        Powerful algorithm that finds optimal hyperplanes to separate classes by maximizing margins, 
+                        capable of handling both linear and non-linear classification through kernel tricks.
+                    </p>
+                    <div class="algorithm-features">
+                        <div class="feature-item">
+                            <span class="feature-icon">✓</span>
+                            <span>Effective in high dimensions</span>
+                        </div>
+                        <div class="feature-item">
+                            <span class="feature-icon">✓</span>
+                            <span>Memory efficient</span>
+                        </div>
+                        <div class="feature-item">
+                            <span class="feature-icon">✓</span>
+                            <span>Versatile kernel functions</span>
+                        </div>
+                        <div class="feature-item">
+                            <span class="feature-icon">✓</span>
+                            <span>Strong theoretical foundation</span>
+                        </div>
+                    </div>
+                    <button class="btn" onclick="demoSVM()">🎯 Demo</button>
+                    <button class="btn btn-secondary" onclick="showAlgorithmCode('svm')">💻 Code</button>
+                </div>
+
+                <div class="algorithm-card">
+                    <span class="algorithm-icon">🔮</span>
+                    <h3 class="algorithm-title">Naive Bayes</h3>
+                    <p class="algorithm-desc">
+                        Probabilistic classifier based on Bayes' theorem with strong independence assumptions, 
+                        particularly effective for text classification and high-dimensional data.
+                    </p>
+                    <div class="algorithm-features">
+                        <div class="feature-item">
+                            <span class="feature-icon">✓</span>
+                            <span>Fast training & prediction</span>
+                        </div>
+                        <div class="feature-item">
+                            <span class="feature-icon">✓</span>
+                            <span>Requires small training data</span>
+                        </div>
+                        <div class="feature-item">
+                            <span class="feature-icon">✓</span>
+                            <span>Handles missing data well</span>
+                        </div>
+                        <div class="feature-item">
+                            <span class="feature-icon">✓</span>
+                            <span>Good baseline for text classification</span>
+                        </div>
+                    </div>
+                    <button class="btn" onclick="demoNaiveBayes()">🔮 Demo</button>
+                    <button class="btn btn-secondary" onclick="showAlgorithmCode('naive')">💻 Code</button>
+                </div>
+
+                <div class="algorithm-card">
+                    <span class="algorithm-icon">📏</span>
+                    <h3 class="algorithm-title">K-Nearest Neighbors</h3>
+                    <p class="algorithm-desc">
+                        Instance-based learning algorithm that classifies data points based on the majority vote 
+                        of their k nearest neighbors in the feature space.
+                    </p>
+                    <div class="algorithm-features">
+                        <div class="feature-item">
+                            <span class="feature-icon">✓</span>
+                            <span>Simple and intuitive</span>
+                        </div>
+                        <div class="feature-item">
+                            <span class="feature-icon">✓</span>
+                            <span>No assumptions about data</span>
+                        </div>
+                        <div class="feature-item">
+                            <span class="feature-icon">✓</span>
+                            <span>Adapts to new data naturally</span>
+                        </div>
+                        <div class="feature-item">
+                            <span class="feature-icon">✓</span>
+                            <span>Works for both classification & regression</span>
+                        </div>
+                    </div>
+                    <button class="btn" onclick="demoKNN()">📏 Demo</button>
+                    <button class="btn btn-secondary" onclick="showAlgorithmCode('knn')">💻 Code</button>
+                </div>
+            </div>
+        </section>
+
+        <section id="ensemble" class="ensemble-section">
+            <h2 class="ensemble-title">🎯 Ensemble Methods</h2>
+            <p style="text-align: center; font-size: 1.2rem; margin-bottom: 2rem; opacity: 0.9;">
+                Combine multiple models to create more powerful and robust predictions
+            </p>
+            
+            <div class="ensemble-grid">
+                <div class="algorithm-card">
+                    <span class="algorithm-icon">🎲</span>
+                    <h3 class="algorithm-title">Bagging & Random Forest</h3>
+                    <p class="algorithm-desc">
+                        Bootstrap Aggregating trains multiple models on random data subsets. Random Forest extends 
+                        this by adding feature randomness to decision trees, reducing overfitting.
+                    </p>
+                    <div class="algorithm-features">
+                        <div class="feature-item">
+                            <span class="feature-icon">✓</span>
+                            <span>Reduces variance and overfitting</span>
+                        </div>
+                        <div class="feature-item">
+                            <span class="feature-icon">✓</span>
+                            <span>Parallel training possible</span>
+                        </div>
+                        <div class="feature-item">
+                            <span class="feature-icon">✓</span>
+                            <span>Feature importance ranking</span>
+                        </div>
+                        <div class="feature-item">
+                            <span class="feature-icon">✓</span>
+                            <span>Handles missing values</span>
+                        </div>
+                    </div>
+                    <button class="btn" onclick="demoRandomForest()">🌲 Demo</button>
+                    <button class="btn btn-secondary" onclick="showAlgorithmCode('forest')">💻 Code</button>
+                </div>
+
+                <div class="algorithm-card">
+                    <span class="algorithm-icon">⚡</span>
+                    <h3 class="algorithm-title">Boosting & AdaBoost</h3>
+                    <p class="algorithm-desc">
+                        Sequential ensemble learning that focuses on correcting errors of previous models. 
+                        AdaBoost adaptively adjusts weights to improve weak learners performance.
+                    </p>
+                    <div class="algorithm-features">
+                        <div class="feature-item">
+                            <span class="feature-icon">✓</span>
+                            <span>Reduces bias and variance</span>
+                        </div>
+                        <div class="feature-item">
+                            <span class="feature-icon">✓</span>
+                            <span>Converts weak to strong learners</span>
+                        </div>
+                        <div class="feature-item">
+                            <span class="feature-icon">✓</span>
+                            <span>Adaptive error correction</span>
+                        </div>
+                        <div class="feature-item">
+                            <span class="feature-icon">✓</span>
+                            <span>Good generalization ability</span>
+                        </div>
+                    </div>
+                    <button class="btn" onclick="demoAdaBoost()">⚡ Demo</button>
+                    <button class="btn btn-secondary" onclick="showAlgorithmCode('ada')">💻 Code</button>
+                </div>
+
+                <div class="algorithm-card">
+                    <span class="algorithm-icon">🚀</span>
+                    <h3 class="algorithm-title">Gradient Boosting & XGBoost</h3>
+                    <p class="algorithm-desc">
+                        Advanced boosting that optimizes differentiable loss functions. XGBoost adds regularization, 
+                        parallel processing, and advanced optimizations for superior performance.
+                    </p>
+                    <div class="algorithm-features">
+                        <div class="feature-item">
+                            <span class="feature-icon">✓</span>
+                            <span>State-of-the-art performance</span>
+                        </div>
+                        <div class="feature-item">
+                            <span class="feature-icon">✓</span>
+                            <span>Built-in regularization</span>
+                        </div>
+                        <div class="feature-item">
+                            <span class="feature-icon">✓</span>
+                            <span>Handles missing values</span>
+                        </div>
+                        <div class="feature-item">
+                            <span class="feature-icon">✓</span>
+                            <span>Cross-validation support</span>
+                        </div>
+                    </div>
+                    <button class="btn" onclick="demoXGBoost()">🚀 Demo</button>
+                    <button class="btn btn-secondary" onclick="showAlgorithmCode('xgb')">💻 Code</button>
+                </div>
+
+                <div class="algorithm-card">
+                    <span class="algorithm-icon">🗳️</span>
+                    <h3 class="algorithm-title">Voting & Stacking</h3>
+                    <p class="algorithm-desc">
+                        Meta-ensemble approaches that combine different algorithms. Voting uses majority decisions, 
+                        while stacking trains a meta-model to learn optimal combinations.
+                    </p>
+                    <div class="algorithm-features">
+                        <div class="feature-item">
+                            <span class="feature-icon">✓</span>
+                            <span>Combines diverse algorithms</span>
+                        </div>
+                        <div class="feature-item">
+                            <span class="feature-icon">✓</span>
+                            <span>Hard and soft voting options</span>
+                        </div>
+                        <div class="feature-item">
+                            <span class="feature-icon">✓</span>
+                            <span>Meta-learning capabilities</span>
+                        </div>
+                        <div class="feature-item">
+                            <span class="feature-icon">✓</span>
+                            <span>Maximum algorithm diversity</span>
+                        </div>
+                    </div>
+                    <button class="btn" onclick="demoVoting()">🗳️ Demo</button>
+                    <button class="btn btn-secondary" onclick="showAlgorithmCode('voting')">💻 Code</button>
+                </div>
+            </div>
+        </section>
+
+        <div class="demo-section" id="demo-area">
+            <h3 class="demo-title">🔬 Interactive Algorithm Demonstration</h3>
+            <p>Click on any algorithm demo button above to see interactive visualizations and explanations!</p>
+            <div class="chart-container">
+                <canvas id="algorithmChart"></canvas>
+            </div>
+            <div id="demo-details"></div>
+        </div>
+    </div>
+
+    <script>
+        let currentChart = null;
+
+        function scrollToSection(sectionId) {
+            document.getElementById(sectionId).scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function generateSampleData(algorithm) {
+            const data = [];
+            const labels = [];
+            
+            for (let i = 0; i < 100; i++) {
+                const x = (Math.random() - 0.5) * 10;
+                const y = (Math.random() - 0.5) * 10;
+                
+                let label;
+                switch(algorithm) {
+                    case 'logistic':
+                        label = x + y > 0 ? 1 : 0;
+                        break;
+                    case 'svm':
+                        label = x * x + y * y > 25 ? 1 : 0;
+                        break;
+                    case 'naive':
+                        label = x > 0 && y > 0 ? 1 : 0;
+                        break;
+                    default:
+                        label = Math.random() > 0.5 ? 1 : 0;
+                }
+                
+                data.push({x: x, y: y});
+                labels.push(label);
+            }
+            
+            return {data, labels};
+        }
+
+        function createScatterChart(data, labels, title) {
+            const ctx = document.getElementById('algorithmChart').getContext('2d');
+            
+            if (currentChart) {
+                currentChart.destroy();
+            }
+
+            const class0 = data.filter((_, i) => labels[i] === 0);
+            const class1 = data.filter((_, i) => labels[i] === 1);
+
+            currentChart = new Chart(ctx, {
+                type: 'scatter',
+                data: {
+                    datasets: [
+                        {
+                            label: 'Class 0',
+                            data: class0,
+                            backgroundColor: 'rgba(231, 76, 60, 0.7)',
+                            borderColor: 'rgba(231, 76, 60, 1)',
+                            pointRadius: 6
+                        },
+                        {
+                            label: 'Class 1',
+                            data: class1,
+                            backgroundColor: 'rgba(52, 152, 219, 0.7)',
+                            borderColor: 'rgba(52, 152, 219, 1)',
+                            pointRadius: 6
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: title,
+                            color: 'white',
+                            font: { size: 16 }
+                        },
+                        legend: {
+                            labels: { color: 'white' }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: { display: true, text: 'Feature 1', color: 'white' },
+                            ticks: { color: 'white' },
+                            grid: { color: 'rgba(255,255,255,0.1)' }
+                        },
+                        y: {
+                            title: { display: true, text: 'Feature 2', color: 'white' },
+                            ticks: { color: 'white' },
+                            grid: { color: 'rgba(255,255,255,0.1)' }
+                        }
+                    }
+                }
+            });
+        }
+
+        function demoLogisticRegression() {
+            const {data, labels} = generateSampleData('logistic');
+            createScatterChart(data, labels, 'Logistic Regression - Linear Decision Boundary');
+            
+            document.getElementById('demo-details').innerHTML = `
+                <div class="code-block">
+                    <h4>Logistic Regression</h4>
+                    <p><strong>How it works:</strong> Uses the sigmoid function to model probabilities: P(y=1) = 1/(1 + e^(-z)) where z = w₀ + w₁x₁ + w₂x₂</p>
+                    <p><strong>Decision boundary:</strong> Linear hyperplane that separates classes</p>
+                    <p><strong>Best for:</strong> Binary classification, when you need probability estimates, interpretable results</p>
+                </div>
+            `;
+        }
+
+        function demoSVM() {
+            const {data, labels} = generateSampleData('svm');
+            createScatterChart(data, labels, 'Support Vector Machine - Maximum Margin Classifier');
+            
+            document.getElementById('demo-details').innerHTML = `
+                <div class="code-block">
+                    <h4>Support Vector Machine</h4>
+                    <p><strong>How it works:</strong> Finds the optimal hyperplane that maximizes the margin between classes</p>
+                    <p><strong>Key insight:</strong> Only support vectors (points closest to decision boundary) matter</p>
+                    <p><strong>Kernel trick:</strong> Can handle non-linear problems by mapping to higher dimensions</p>
+                    <p><strong>Best for:</strong> High-dimensional data, when data is not linearly separable, text classification</p>
+                </div>
+            `;
+        }
+
+        function demoNaiveBayes() {
+            const {data, labels} = generateSampleData('naive');
+            createScatterChart(data, labels, 'Naive Bayes - Probabilistic Classification');
+            
+            document.getElementById('demo-details').innerHTML = `
+                <div class="code-block">
+                    <h4>Naive Bayes Classifier</h4>
+                    <p><strong>How it works:</strong> Applies Bayes' theorem: P(y|x) = P(x|y) × P(y) / P(x)</p>
+                    <p><strong>Naive assumption:</strong> Features are conditionally independent given the class</p>
+                    <p><strong>Variants:</strong> Gaussian (continuous), Multinomial (discrete), Bernoulli (binary)</p>
+                    <p><strong>Best for:</strong> Text classification, spam filtering, small datasets, baseline models</p>
+                </div>
+            `;
+        }
+
+        function demoKNN() {
+            const {data, labels} = generateSampleData('knn');
+            createScatterChart(data, labels, 'K-Nearest Neighbors - Instance-Based Learning');
+            
+            document.getElementById('demo-details').innerHTML = `
+                <div class="code-block">
+                    <h4>K-Nearest Neighbors</h4>
+                    <p><strong>How it works:</strong> Classifies based on majority vote of k nearest neighbors</p>
+                    <p><strong>Distance metrics:</strong> Euclidean, Manhattan, Minkowski, etc.</p>
+                    <p><strong>Choosing k:</strong> Odd numbers avoid ties, cross-validation helps optimize</p>
+                    <p><strong>Best for:</strong> Simple problems, non-linear data, recommendation systems</p>
+                </div>
+            `;
+        }
+
+        function demoRandomForest() {
+            const accuracyData = [0.85, 0.92, 0.89, 0.94, 0.91];
+            const ctx = document.getElementById('algorithmChart').getContext('2d');
+            
+            if (currentChart) currentChart.destroy();
+            
+            currentChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Single Tree', 'RF (10 trees)', 'RF (50 trees)', 'RF (100 trees)', 'RF (200 trees)'],
+                    datasets: [{
+                        label: 'Accuracy',
+                        data: accuracyData,
+                        backgroundColor: 'rgba(46, 204, 113, 0.7)',
+                        borderColor: 'rgba(46, 204, 113, 1)',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: { display: true, text: 'Random Forest Performance vs Single Tree', color: 'white' },
+                        legend: { labels: { color: 'white' } }
+                    },
+                    scales: {
+                        x: { ticks: { color: 'white' }, grid: { color: 'rgba(255,255,255,0.1)' } },
+                        y: { ticks: { color: 'white' }, grid: { color: 'rgba(255,255,255,0.1)' } }
+                    }
+                }
+            });
+
+            document.getElementById('demo-details').innerHTML = `
+                <div class="code-block">
+                    <h4>Random Forest (Bagging)</h4>
+                    <p><strong>How it works:</strong> Combines multiple decision trees trained on random data subsets</p>
+                    <p><strong>Randomness:</strong> Bootstrap sampling + random feature selection at each split</p>
+                    <p><strong>Prediction:</strong> Majority vote (classification) or average (regression)</p>
+                    <p><strong>Benefits:</strong> Reduces overfitting, provides feature importance, handles missing values</p>
+                </div>
+            `;
+        }
+
+        function demoAdaBoost() {
+            const iterationData = [0.6, 0.72, 0.81, 0.87, 0.91, 0.93, 0.94];
+            const ctx = document.getElementById('algorithmChart').getContext('2d');
+            
+            if (currentChart) currentChart.destroy();
+            
+            currentChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Iteration 1', 'Iteration 2', 'Iteration 3', 'Iteration 4', 'Iteration 5', 'Iteration 6', 'Iteration 7'],
+                    datasets: [{
+                        label: 'Training Accuracy',
+                        data: iterationData,
+                        borderColor: 'rgba(230, 126, 34, 1)',
+                        backgroundColor: 'rgba(230, 126, 34, 0.2)',
+                        tension: 0.4,
+                        pointRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: { display: true, text: 'AdaBoost Learning Progress', color: 'white' },
+                        legend: { labels: { color: 'white' } }
+                    },
+                    scales: {
+                        x: { ticks: { color: 'white' }, grid: { color: 'rgba(255,255,255,0.1)' } },
+                        y: { ticks: { color: 'white' }, grid: { color: 'rgba(255,255,255,0.1)' } }
+                    }
+                }
+            });
+
+            document.getElementById('demo-details').innerHTML = `
+                <div class="code-block">
+                    <h4>AdaBoost (Adaptive Boosting)</h4>
+                    <p><strong>How it works:</strong> Sequentially trains weak learners, focusing on misclassified examples</p>
+                    <p><strong>Weight adjustment:</strong> Increases weights of misclassified samples for next iteration</p>
+                    <p><strong>Final prediction:</strong> Weighted majority vote based on classifier accuracy</p>
+                    <p><strong>Key insight:</strong> Converts weak learners (barely better than random) into strong classifier</p>
+                </div>
+            `;
+        }
+
+        function demoXGBoost() {
+            const comparisonData = {
+                algorithms: ['Logistic Reg', 'Random Forest', 'AdaBoost', 'Gradient Boost', 'XGBoost'],
+                accuracy: [0.82, 0.89, 0.87, 0.92, 0.95],
+                speed: [0.95, 0.7, 0.6, 0.4, 0.8]
+            };
+            
+            const ctx = document.getElementById('algorithmChart').getContext('2d');
+            
+            if (currentChart) currentChart.destroy();
+            
+            currentChart = new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: comparisonData.algorithms,
+                    datasets: [
+                        {
+                            label: 'Accuracy',
+                            data: comparisonData.accuracy,
+                            borderColor: 'rgba(155, 89, 182, 1)',
+                            backgroundColor: 'rgba(155, 89, 182, 0.2)',
+                            pointRadius: 6
+                        },
+                        {
+                            label: 'Speed',
+                            data: comparisonData.speed,
+                            borderColor: 'rgba(52, 152, 219, 1)',
+                            backgroundColor: 'rgba(52, 152, 219, 0.2)',
+                            pointRadius: 6
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: { display: true, text: 'Algorithm Comparison: Accuracy vs Speed', color: 'white' },
+                        legend: { labels: { color: 'white' } }
+                    },
+                    scales: {
+                        r: {
+                            ticks: { color: 'white' },
+                            grid: { color: 'rgba(255,255,255,0.2)' },
+                            pointLabels: { color: 'white' }
+                        }
+                    }
+                }
+            });
+
+            document.getElementById('demo-details').innerHTML = `
+                <div class="code-block">
+                    <h4>XGBoost (Extreme Gradient Boosting)</h4>
+                    <p><strong>How it works:</strong> Optimized gradient boosting with regularization and advanced tree pruning</p>
+                    <p><strong>Key features:</strong> Parallel processing, built-in cross-validation, handling missing values</p>
+                    <p><strong>Regularization:</strong> L1 and L2 penalties prevent overfitting</p>
+                    <p><strong>Why it wins:</strong> Superior performance in competitions, handles real-world data challenges</p>
+                </div>
+            `;
+        }
+
+        function demoVoting() {
+            const ensembleComparison = {
+                methods: ['Individual\nClassifiers', 'Hard Voting', 'Soft Voting', 'Stacking'],
+                performance: [0.85, 0.89, 0.91, 0.93]
+            };
+            
+            const ctx = document.getElementById('algorithmChart').getContext('2d');
+            
+            if (currentChart) currentChart.destroy();
+            
+            currentChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ensembleComparison.methods,
+                    datasets: [{
+                        label: 'Performance',
+                        data: ensembleComparison.performance,
+                        backgroundColor: [
+                            'rgba(231, 76, 60, 0.7)',
+                            'rgba(52, 152, 219, 0.7)',
+                            'rgba(46, 204, 113, 0.7)',
+                            'rgba(155, 89, 182, 0.7)'
+                        ],
+                        borderColor: [
+                            'rgba(231, 76, 60, 1)',
+                            'rgba(52, 152, 219, 1)',
+                            'rgba(46, 204, 113, 1)',
+                            'rgba(155, 89, 182, 1)'
+                        ],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: { display: true, text: 'Ensemble Methods Performance Comparison', color: 'white' },
+                        legend: { labels: { color: 'white' } }
+                    },
+                    scales: {
+                        x: { ticks: { color: 'white' }, grid: { color: 'rgba(255,255,255,0.1)' } },
+                        y: { ticks: { color: 'white' }, grid: { color: 'rgba(255,255,255,0.1)' } }
+                    }
+                }
+            });
+
+            document.getElementById('demo-details').innerHTML = `
+                <div class="code-block">
+                    <h4>Voting & Stacking Ensembles</h4>
+                    <p><strong>Hard Voting:</strong> Majority class prediction from multiple classifiers</p>
+                    <p><strong>Soft Voting:</strong> Average predicted probabilities from classifiers</p>
+                    <p><strong>Stacking:</strong> Meta-learner trained on base classifier predictions</p>
+                    <p><strong>Power of diversity:</strong> Combining different algorithms often outperforms individual models</p>
+                </div>
+            `;
+        }
+
+        function showAlgorithmCode(algorithm) {
+            const codeExamples = {
+                logistic: `
+# Logistic Regression Implementation
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score, classification_report
+
+# Create and train model
+logreg = LogisticRegression(random_state=42)
+logreg.fit(X_train, y_train)
+
+# Make predictions
+y_pred = logreg.predict(X_test)
+y_proba = logreg.predict_proba(X_test)
+
+# Evaluate
+accuracy = accuracy_score(y_test, y_pred)
+print(f"Accuracy: {accuracy:.3f}")
+print(classification_report(y_test, y_pred))`,
+
+                svm: `
+# Support Vector Machine Implementation
+from sklearn.svm import SVC
+from sklearn.preprocessing import StandardScaler
+
+# Scale features (important for SVM)
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+
+# Create and train SVM
+svm = SVC(kernel='rbf', C=1.0, gamma='scale', random_state=42)
+svm.fit(X_train_scaled, y_train)
+
+# Make predictions
+y_pred = svm.predict(X_test_scaled)
+accuracy = accuracy_score(y_test, y_pred)
+print(f"SVM Accuracy: {accuracy:.3f}")`,
+
+                naive: `
+# Naive Bayes Implementation
+from sklearn.naive_bayes import GaussianNB, MultinomialNB
+from sklearn.feature_extraction.text import TfidfVectorizer
+
+# For continuous features
+gnb = GaussianNB()
+gnb.fit(X_train, y_train)
+y_pred_gauss = gnb.predict(X_test)
+
+# For text classification
+vectorizer = TfidfVectorizer()
+X_train_tfidf = vectorizer.fit_transform(text_train)
+X_test_tfidf = vectorizer.transform(text_test)
+
+mnb = MultinomialNB()
+mnb.fit(X_train_tfidf, y_train)
+y_pred_text = mnb.predict(X_test_tfidf)`,
+
+                knn: `
+# K-Nearest Neighbors Implementation
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.model_selection import cross_val_score
+
+# Find optimal k
+k_values = range(1, 21)
+cv_scores = []
+
+for k in k_values:
+    knn = KNeighborsClassifier(n_neighbors=k)
+    scores = cross_val_score(knn, X_train, y_train, cv=5)
+    cv_scores.append(scores.mean())
+
+optimal_k = k_values[cv_scores.index(max(cv_scores))]
+
+# Train final model
+knn = KNeighborsClassifier(n_neighbors=optimal_k)
+knn.fit(X_train, y_train)
+y_pred = knn.predict(X_test)`,
+
+                forest: `
+# Random Forest Implementation
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import feature_importances_
+
+# Create and train Random Forest
+rf = RandomForestClassifier(
+    n_estimators=100,
+    max_depth=10,
+    min_samples_split=2,
+    min_samples_leaf=1,
+    random_state=42,
+    n_jobs=-1
+)
+
+rf.fit(X_train, y_train)
+y_pred = rf.predict(X_test)
+
+# Feature importance
+importances = rf.feature_importances_
+feature_ranking = sorted(zip(feature_names, importances), 
+                        key=lambda x: x[1], reverse=True)
+
+# Out-of-bag score
+rf_oob = RandomForestClassifier(oob_score=True, random_state=42)
+rf_oob.fit(X_train, y_train)
+print(f"OOB Score: {rf_oob.oob_score_:.3f}")`,
+
+                ada: `
+# AdaBoost Implementation
+from sklearn.ensemble import AdaBoostClassifier
+from sklearn.tree import DecisionTreeClassifier
+
+# Create weak learner (decision stump)
+weak_learner = DecisionTreeClassifier(max_depth=1, random_state=42)
+
+# Create AdaBoost classifier
+ada = AdaBoostClassifier(
+    base_estimator=weak_learner,
+    n_estimators=50,
+    learning_rate=1.0,
+    random_state=42
+)
+
+ada.fit(X_train, y_train)
+y_pred = ada.predict(X_test)
+
+# Feature importance
+importances = ada.feature_importances_
+
+# Staged predictions (learning curve)
+staged_scores = []
+for pred in ada.staged_predict(X_test):
+    staged_scores.append(accuracy_score(y_test, pred))`,
+
+                xgb: `
+# XGBoost Implementation
+import xgboost as xgb
+from sklearn.model_selection import GridSearchCV
+
+# Create XGBoost classifier
+xgb_clf = xgb.XGBClassifier(
+    objective='binary:logistic',
+    random_state=42,
+    n_jobs=-1
+)
+
+# Hyperparameter tuning
+param_grid = {
+    'n_estimators': [100, 200],
+    'max_depth': [3, 5, 7],
+    'learning_rate': [0.01, 0.1, 0.2],
+    'subsample': [0.8, 1.0]
+}
+
+grid_search = GridSearchCV(xgb_clf, param_grid, cv=5, scoring='accuracy')
+grid_search.fit(X_train, y_train)
+
+# Best model
+best_xgb = grid_search.best_estimator_
+y_pred = best_xgb.predict(X_test)
+
+# Feature importance
+feature_importance = best_xgb.get_booster().get_importance(importance_type='weight')`,
+
+                voting: `
+# Voting and Stacking Ensemble
+from sklearn.ensemble import VotingClassifier, StackingClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.svm import SVC
+from sklearn.ensemble import RandomForestClassifier
+
+# Individual classifiers
+clf1 = LogisticRegression(random_state=42)
+clf2 = SVC(probability=True, random_state=42)
+clf3 = RandomForestClassifier(random_state=42)
+
+# Hard Voting
+hard_voting = VotingClassifier(
+    estimators=[('lr', clf1), ('svc', clf2), ('rf', clf3)],
+    voting='hard'
+)
+
+# Soft Voting
+soft_voting = VotingClassifier(
+    estimators=[('lr', clf1), ('svc', clf2), ('rf', clf3)],
+    voting='soft'
+)
+
+# Stacking
+stacking = StackingClassifier(
+    estimators=[('lr', clf1), ('svc', clf2), ('rf', clf3)],
+    final_estimator=LogisticRegression(),
+    cv=5
+)
+
+# Train all ensembles
+for ensemble in [hard_voting, soft_voting, stacking]:
+    ensemble.fit(X_train, y_train)
+    pred = ensemble.predict(X_test)
+    acc = accuracy_score(y_test, pred)
+    print(f"{ensemble.__class__.__name__} Accuracy: {acc:.3f}")`
+            };
+
+            const demoArea = document.getElementById('demo-details');
+            demoArea.innerHTML = `
+                <div class="code-block">
+                    <h4>Implementation Code</h4>
+                    <pre style="white-space: pre-wrap; font-size: 0.85rem;">${codeExamples[algorithm] || 'Code example not available'}</pre>
+                </div>
+            `;
+        }
+
+        // Initialize with a default demo
+        document.addEventListener('DOMContentLoaded', function() {
+            demoLogisticRegression();
+        });
+    </script>
+</body>
+</html>
