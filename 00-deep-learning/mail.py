@@ -1,16 +1,16 @@
 """
-Incident Classification System using Pre-trained Embeddings + PyTorch with Class Descriptions
-===========================================================================================
+Incident Classification System using Pre-trained Embeddings + PyTorch with Existing Data
+========================================================================================
 
-This implementation uses a separate embedding model to create text embeddings,
-then feeds those embeddings along with class description context into PyTorch neural networks.
+This implementation uses existing incident data and issue class definitions to train
+a classification model that leverages class descriptions for better context understanding.
 
-Approach:
-1. Define classes with detailed descriptions
-2. Generate fake incident data
-3. Use pre-trained embedding model to create embeddings for both text and class descriptions
-4. Train PyTorch neural networks using text embeddings and class description context
-5. Provides multiple NN architectures with class-aware features
+Requirements:
+- df: DataFrame with incident data (should have 'combined' column and class labels)
+- issue_summary: Dictionary with class names and their descriptions
+
+Usage:
+    results = train_incident_classifier(df, issue_summary)
 """
 
 import torch
@@ -23,6 +23,7 @@ import random
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.preprocessing import LabelEncoder
 from sentence_transformers import SentenceTransformer
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -40,279 +41,119 @@ def set_seed(seed=42):
 set_seed(42)
 
 # =====================================================
-# 1. CLASS DEFINITIONS WITH DESCRIPTIONS
+# 1. DATA PREPROCESSING AND CLASS HANDLING
 # =====================================================
 
-class IncidentClassDefinitions:
-    def __init__(self):
-        # Define the 7 incident classes with detailed descriptions
-        self.class_definitions = {
-            "Network Outage": {
-                "description": "Network connectivity issues including internet outages, VPN failures, router malfunctions, switch problems, firewall blocking, DNS resolution issues, bandwidth limitations, and any infrastructure problems that prevent network communication and data transmission between systems, users, or external services.",
-                "keywords": ["network", "connectivity", "internet", "VPN", "router", "switch", "firewall", "DNS", "bandwidth", "infrastructure", "communication", "transmission"],
-                "severity_indicators": ["critical", "high priority", "service unavailable", "complete outage", "widespread impact"]
-            },
-            "Security Breach": {
-                "description": "Security incidents involving unauthorized access attempts, malware infections, phishing attacks, data breaches, suspicious activities, brute force attacks, social engineering, vulnerability exploits, and any compromise of system integrity, confidentiality, or availability that threatens organizational security.",
-                "keywords": ["security", "unauthorized", "malware", "phishing", "breach", "suspicious", "attack", "vulnerability", "compromise", "threat", "exploit", "intrusion"],
-                "severity_indicators": ["security alert", "critical vulnerability", "data at risk", "immediate response", "containment required"]
-            },
-            "Hardware Failure": {
-                "description": "Physical hardware malfunctions including server failures, disk crashes, CPU overheating, memory errors, power supply issues, cooling system problems, component degradation, and any physical equipment problems that affect system operation and require hardware replacement or repair.",
-                "keywords": ["hardware", "server", "disk", "CPU", "memory", "power", "cooling", "component", "physical", "equipment", "replacement", "repair"],
-                "severity_indicators": ["hardware failure", "system down", "replacement needed", "physical damage", "equipment malfunction"]
-            },
-            "Software Bug": {
-                "description": "Software defects and programming errors including application crashes, unexpected behavior, logic errors, memory leaks, null pointer exceptions, API failures, database query issues, user interface problems, and any software-related issues that cause applications to malfunction or behave incorrectly.",
-                "keywords": ["software", "bug", "crash", "error", "exception", "API", "database", "query", "application", "code", "programming", "logic"],
-                "severity_indicators": ["application error", "system crash", "data corruption", "functionality broken", "critical bug"]
-            },
-            "User Access Issue": {
-                "description": "Authentication and authorization problems including login failures, password resets, permission denied errors, account lockouts, single sign-on issues, two-factor authentication problems, user provisioning issues, and any problems preventing users from accessing systems or resources they need.",
-                "keywords": ["access", "login", "password", "permission", "account", "authentication", "authorization", "SSO", "2FA", "user", "provisioning", "credentials"],
-                "severity_indicators": ["access denied", "login failed", "account locked", "permission error", "authentication failure"]
-            },
-            "Performance Issue": {
-                "description": "System performance degradation including slow response times, high resource utilization, memory consumption problems, CPU bottlenecks, database slowdowns, network latency, application timeouts, and any issues that cause systems to operate below expected performance levels or user experience standards.",
-                "keywords": ["performance", "slow", "response", "latency", "bottleneck", "timeout", "resource", "utilization", "memory", "CPU", "degradation", "speed"],
-                "severity_indicators": ["slow performance", "high latency", "resource exhaustion", "timeout errors", "degraded service"]
-            },
-            "Data Loss": {
-                "description": "Data availability and integrity issues including file deletions, database corruption, backup failures, storage problems, data synchronization errors, recovery issues, and any incidents that result in loss, corruption, or unavailability of important business data or user information.",
-                "keywords": ["data", "loss", "corruption", "backup", "recovery", "storage", "file", "database", "synchronization", "integrity", "deletion", "missing"],
-                "severity_indicators": ["data lost", "corruption detected", "backup failed", "recovery needed", "critical data affected"]
-            }
-        }
+class DataPreprocessor:
+    def __init__(self, df, issue_summary, text_column='combined', class_column='class'):
+        """
+        Initialize with existing data
         
+        Args:
+            df: DataFrame with incident data
+            issue_summary: Dictionary with class definitions
+                Format: {class_name: {"description": "...", "keywords": [...], ...}}
+                OR: {class_name: "description_string"}
+            text_column: Column name containing the text to classify
+            class_column: Column name containing the class labels
+        """
+        self.df = df.copy()
+        self.text_column = text_column
+        self.class_column = class_column
+        self.issue_summary = issue_summary
+        
+        # Process issue_summary to standardize format
+        self.class_definitions = self._standardize_issue_summary()
         self.classes = list(self.class_definitions.keys())
-        self.class_to_idx = {cls: idx for idx, cls in enumerate(self.classes)}
-        self.idx_to_class = {idx: cls for cls, idx in self.class_to_idx.items()}
+        
+        # Create label encoders
+        self.label_encoder = LabelEncoder()
+        self._prepare_data()
+        
+    def _standardize_issue_summary(self):
+        """Standardize issue_summary format"""
+        standardized = {}
+        
+        for class_name, class_info in self.issue_summary.items():
+            if isinstance(class_info, str):
+                # Simple string description
+                standardized[class_name] = {
+                    "description": class_info,
+                    "keywords": self._extract_keywords_from_description(class_info)
+                }
+            elif isinstance(class_info, dict):
+                # Dictionary with description and possibly other fields
+                description = class_info.get("description", class_info.get("desc", ""))
+                keywords = class_info.get("keywords", class_info.get("tags", []))
+                
+                if not keywords:
+                    keywords = self._extract_keywords_from_description(description)
+                
+                standardized[class_name] = {
+                    "description": description,
+                    "keywords": keywords
+                }
+            else:
+                raise ValueError(f"Unsupported format for class {class_name}: {type(class_info)}")
+        
+        return standardized
     
-    def get_class_description(self, class_name):
-        return self.class_definitions[class_name]["description"]
-    
-    def get_class_keywords(self, class_name):
-        return self.class_definitions[class_name]["keywords"]
-    
-    def get_all_descriptions(self):
-        return [self.class_definitions[cls]["description"] for cls in self.classes]
-
-# =====================================================
-# 2. FAKE DATA GENERATION WITH CLASS-AWARE CONTENT
-# =====================================================
-
-class IncidentDataGenerator:
-    def __init__(self, class_definitions):
-        self.class_definitions = class_definitions
-        self.classes = class_definitions.classes
-        
-        # Enhanced templates that incorporate class-specific keywords
-        self.templates = {
-            "Network Outage": [
-                "Network connectivity lost in {location}. Users unable to access {service}. {severity} impact on infrastructure communication.",
-                "Internet connection down affecting {department}. Router malfunction causing {details} reported by users.",
-                "VPN connectivity issues preventing remote access. DNS resolution failures and {investigation} in progress.",
-                "Switch failure causing network instability in {location}. Firewall blocking legitimate traffic and {resolution} being implemented.",
-                "Bandwidth limitations affecting {service}. Network infrastructure showing {details} requiring immediate attention.",
-                "WiFi connectivity problems in {location}. Network transmission errors and communication breakdowns observed."
-            ],
-            "Security Breach": [
-                "Suspicious login attempts detected from {location}. Unauthorized access threats and {action} taken immediately.",
-                "Malware infection discovered on {system}. Security vulnerability exploited and {containment} measures activated.",
-                "Phishing attack targeting {department}. Social engineering attempt with {response} protocol initiated.",
-                "Brute force attack on {resource}. Multiple unauthorized access attempts blocked and security team investigating.",
-                "Data breach attempt detected. Suspicious activities monitored and {security} containment procedures deployed.",
-                "Intrusion detection system triggered. Compromise of system integrity suspected and immediate {action} required."
-            ],
-            "Hardware Failure": [
-                "Server {server_id} experiencing critical hardware malfunction. Physical equipment failure causing {impact} on services.",
-                "Disk crash detected on {system}. Storage hardware degradation and {backup} procedures initiated immediately.",
-                "CPU overheating on {hardware}. Cooling system failure and {replacement} of physical components scheduled.",
-                "Memory error causing system instability. Hardware component failure and {maintenance} repair procedures needed.",
-                "Power supply unit failure on {server}. Equipment malfunction affecting {system} and redundancy systems activated.",
-                "Hard drive showing bad sectors. Physical storage problems and {recovery} of hardware components required."
-            ],
-            "Software Bug": [
-                "Application {app_name} crashing unexpectedly. Programming error and {error} detected in system logs.",
-                "Database query optimization needed. Logic error causing {performance} degradation and code review required.",
-                "API endpoint returning {error_code}. Software defect and {debugging} of application code in progress.",
-                "User interface not responding correctly. Programming bug and {bug_report} submitted for code analysis.",
-                "Memory leak detected in {application}. Software malfunction and {investigation} of code logic underway.",
-                "Null pointer exception in {module}. Application error and {fix} being developed by programming team."
-            ],
-            "User Access Issue": [
-                "User {user_id} unable to login to {system}. Authentication failure and {support} ticket created for access resolution.",
-                "Password reset request for {user}. Credential problems and {verification} process initiated for account access.",
-                "Permission denied error for {resource}. Authorization issue and {access} rights being reviewed by admin.",
-                "Account locked due to multiple failed login attempts. Authentication security and {unlock} procedure started.",
-                "Two-factor authentication failing for {user}. SSO problems and {troubleshooting} of user credentials in progress.",
-                "Single sign-on not working for {application}. User provisioning issues and {configuration} being checked."
-            ],
-            "Performance Issue": [
-                "System {system_name} running slowly. Performance degradation and {monitoring} shows high CPU resource utilization.",
-                "Database queries taking longer than expected. Response time issues and {optimization} needed for better performance.",
-                "Application timeout errors increasing. Performance bottleneck and {investigation} to identify slow components.",
-                "Website loading slowly for users. Latency problems and {performance} analysis in progress for speed improvement.",
-                "Batch job consuming excessive resources. High memory utilization and {resources} being allocated for performance.",
-                "Server response time degraded significantly. Performance monitoring showing {analysis} of resource consumption needed."
-            ],
-            "Data Loss": [
-                "Files missing from {directory}. Data deletion detected and {recovery} procedures initiated for lost information.",
-                "Database corruption discovered during integrity check. Data loss event and {backup} restoration in progress.",
-                "Email data accidentally deleted by user. File recovery needed and {retrieval} from backup systems started.",
-                "User reports lost documents from {share}. Data synchronization failure and {investigation} of missing files.",
-                "Backup verification failed completely. Storage corruption and {integrity} check revealing missing critical data.",
-                "File system corruption on {storage}. Data availability issues and {recovery} tools being deployed immediately."
-            ]
-        }
-        
-        # Enhanced placeholders
-        self.placeholders = {
-            'location': ['Building A', 'Data Center', 'Remote Office', 'Main Campus', 'Branch Office'],
-            'service': ['email system', 'web application', 'database', 'file server', 'CRM system'],
-            'severity': ['Critical', 'High', 'Medium', 'Low'],
-            'department': ['IT', 'Finance', 'HR', 'Sales', 'Marketing'],
-            'details': ['Multiple complaints', 'Intermittent issues', 'Complete failure', 'Partial outage'],
-            'investigation': ['Root cause analysis', 'Troubleshooting', 'Investigation', 'Diagnosis'],
-            'resolution': ['Immediate fix', 'Temporary workaround', 'Scheduled maintenance', 'Emergency repair'],
-            'action': ['Security lockdown', 'Immediate response', 'Investigation', 'Containment'],
-            'system': ['production server', 'development environment', 'workstation', 'laptop'],
-            'containment': ['Isolation', 'Quarantine', 'Removal', 'Blocking'],
-            'resource': ['customer database', 'financial records', 'HR system', 'email server'],
-            'user': ['John Smith', 'IT team', 'Security team', 'End user'],
-            'response': ['Security', 'Emergency', 'Standard', 'Escalated'],
-            'server_id': ['SRV-001', 'SRV-DB-01', 'SRV-WEB-02', 'SRV-APP-03'],
-            'impact': ['Service unavailable', 'Degraded performance', 'Complete outage', 'Partial failure'],
-            'backup': ['Emergency backup', 'Scheduled backup', 'Full restore', 'Incremental restore'],
-            'hardware': ['main server', 'backup server', 'workstation cluster', 'storage array'],
-            'replacement': ['Immediate', 'Next business day', 'Emergency', 'Planned'],
-            'maintenance': ['Scheduled maintenance', 'Emergency repair', 'Component replacement', 'System upgrade'],
-            'app_name': ['CRM Application', 'ERP System', 'Email Client', 'Web Portal'],
-            'error': ['Stack overflow', 'Memory corruption', 'Null reference', 'Access violation'],
-            'performance': ['Significant', 'Minor', 'Noticeable', 'Severe'],
-            'error_code': ['500 error', '404 error', '403 error', 'timeout error'],
-            'debugging': ['Code review', 'Log analysis', 'Performance profiling', 'Error tracing'],
-            'bug_report': ['Detailed report', 'User feedback', 'Error log', 'Test case'],
-            'application': ['web browser', 'desktop app', 'mobile app', 'service'],
-            'fix': ['Hotfix', 'Patch', 'Update', 'Workaround'],
-            'module': ['authentication module', 'payment processor', 'data handler', 'UI component'],
-            'user_id': ['user123', 'jsmith', 'admin', 'testuser'],
-            'support': ['Help desk', 'IT support', 'Technical', 'Emergency'],
-            'verification': ['Identity', 'Email', 'Phone', 'Security'],
-            'access': ['Read/write', 'Administrator', 'User', 'Guest'],
-            'unlock': ['Manual', 'Automated', 'Security', 'Administrative'],
-            'troubleshooting': ['Technical support', 'System diagnosis', 'Configuration check', 'Reset procedure'],
-            'configuration': ['System settings', 'Network config', 'Security settings', 'User preferences'],
-            'system_name': ['Production DB', 'File Server', 'Web Server', 'Mail Server'],
-            'monitoring': ['System logs', 'Performance metrics', 'Resource usage', 'Health checks'],
-            'optimization': ['Query tuning', 'Index optimization', 'Cache improvement', 'Resource allocation'],
-            'resources': ['Additional CPU', 'More memory', 'Extra storage', 'Network bandwidth'],
-            'analysis': ['Performance review', 'Resource audit', 'System check', 'Capacity planning'],
-            'server': ['web server', 'database server', 'application server', 'file server'],
-            'directory': ['/home/users', '/data/shared', '/backup/files', '/project/docs'],
-            'recovery': ['Data recovery', 'File restoration', 'System rebuild', 'Backup restore'],
-            'retrieval': ['Data recovery', 'File extraction', 'Backup restoration', 'Archive access'],
-            'share': ['network drive', 'shared folder', 'cloud storage', 'team directory'],
-            'integrity': ['Data validation', 'Checksum verification', 'Consistency check', 'Corruption scan'],
-            'storage': ['SAN storage', 'NAS device', 'local disk', 'cloud storage'],
-            'security': ['Security team', 'Incident response', 'Threat analysis', 'Vulnerability assessment']
-        }
-        
-        self.ticket_patterns = ['INC-{:06d}', 'TICKET-{:05d}', 'REQ-{:06d}', 'ISSUE-{:05d}']
-        
-    def generate_text(self, incident_type, template):
-        """Generate text by filling template with random placeholders"""
-        text = template
+    def _extract_keywords_from_description(self, description):
+        """Extract basic keywords from description"""
         import re
-        placeholders = re.findall(r'\{(\w+)\}', template)
-        
-        for placeholder in placeholders:
-            if placeholder in self.placeholders:
-                value = random.choice(self.placeholders[placeholder])
-                text = text.replace(f'{{{placeholder}}}', value)
-        
-        return text
+        # Simple keyword extraction
+        words = re.findall(r'\b\w+\b', description.lower())
+        # Filter out common stop words and keep meaningful terms
+        stop_words = {'the', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'a', 'an', 'is', 'are', 'was', 'were', 'be', 'been', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should', 'may', 'might', 'can', 'that', 'this', 'these', 'those'}
+        keywords = [word for word in words if len(word) > 3 and word not in stop_words]
+        return list(set(keywords))  # Remove duplicates
     
-    def generate_class_aware_content(self, incident_class):
-        """Generate content that incorporates class-specific keywords"""
-        class_keywords = self.class_definitions.get_class_keywords(incident_class)
+    def _prepare_data(self):
+        """Prepare data for training"""
+        # Check if required columns exist
+        if self.text_column not in self.df.columns:
+            raise ValueError(f"Text column '{self.text_column}' not found in dataframe")
         
-        # Randomly include some class keywords in the content
-        extra_keywords = random.sample(class_keywords, min(3, len(class_keywords)))
-        keyword_text = f"Related to: {', '.join(extra_keywords)}."
+        if self.class_column not in self.df.columns:
+            raise ValueError(f"Class column '{self.class_column}' not found in dataframe")
         
-        return keyword_text
+        # Remove rows with missing data
+        self.df = self.df.dropna(subset=[self.text_column, self.class_column])
+        
+        # Filter classes to only include those in issue_summary
+        self.df = self.df[self.df[self.class_column].isin(self.classes)]
+        
+        # Encode labels
+        self.df['class_idx'] = self.label_encoder.fit_transform(self.df[self.class_column])
+        
+        # Create mappings
+        self.class_to_idx = {cls: idx for idx, cls in enumerate(self.label_encoder.classes_)}
+        self.idx_to_class = {idx: cls for cls, idx in self.class_to_idx.items()}
+        
+        print(f"Data prepared: {len(self.df)} samples across {len(self.classes)} classes")
+        print("Class distribution:")
+        print(self.df[self.class_column].value_counts())
     
-    def generate_fake_data(self, n_samples=2000):
-        """Generate fake incident data with class-aware content"""
-        data = []
-        
-        for i in range(n_samples):
-            # Randomly select incident class
-            incident_class = random.choice(self.classes)
-            class_idx = self.class_to_idx[incident_class]
-            
-            # Generate ticket ID
-            ticket_id = random.choice(self.ticket_patterns).format(random.randint(1, 999999))
-            
-            # Generate ticket description
-            template = random.choice(self.templates[incident_class])
-            ticket_description = self.generate_text(incident_class, template)
-            
-            # Generate class-aware additional content
-            class_context = self.generate_class_aware_content(incident_class)
-            
-            # Generate notes
-            notes_templates = [
-                f"User reported issue at {{time}}. Initial investigation shows {{finding}}. {class_context}",
-                f"Escalated to {{team}} team. Priority set to {{priority}}. {class_context}",
-                f"Workaround provided: {{workaround}}. Permanent fix scheduled. {class_context}",
-                f"Root cause identified as {{cause}}. Resolution time estimated at {{time}}. {class_context}",
-                f"Customer impact: {{impact}}. Business priority: {{priority}}. {class_context}",
-                f"Technical details: {{technical}}. Next steps: {{steps}}. {class_context}"
-            ]
-            notes_template = random.choice(notes_templates)
-            notes = self.generate_text(incident_class, notes_template)
-            
-            # Generate close notes
-            close_templates = [
-                f"Issue resolved by {{resolution}}. Verified by {{verifier}}. {class_context}",
-                f"Problem fixed through {{fix}}. User confirmed resolution. {class_context}",
-                f"Root cause addressed. Monitoring for {{duration}} to ensure stability. {class_context}",
-                f"Temporary fix applied. Permanent solution scheduled for {{schedule}}. {class_context}",
-                f"Issue closed after successful {{action}}. No further action required. {class_context}",
-                f"Resolution confirmed. Documentation updated with {{info}}. {class_context}"
-            ]
-            close_template = random.choice(close_templates)
-            close_notes = self.generate_text(incident_class, close_template)
-            
-            # Combine all text fields
-            combined_text = f"Ticket: {ticket_description} Notes: {notes} Close Notes: {close_notes}"
-            
-            data.append({
-                'ticket': ticket_id,
-                'ticket_description': ticket_description,
-                'notes': notes,
-                'close_notes': close_notes,
-                'combined': combined_text,
-                'class': incident_class,
-                'class_idx': class_idx
-            })
-        
-        return pd.DataFrame(data)
+    def get_class_descriptions(self):
+        """Get list of class descriptions in label encoder order"""
+        return [self.class_definitions[cls]["description"] for cls in self.label_encoder.classes_]
     
-    @property
-    def class_to_idx(self):
-        return self.class_definitions.class_to_idx
+    def get_class_info(self, class_name):
+        """Get information for a specific class"""
+        return self.class_definitions.get(class_name, {})
 
 # =====================================================
-# 3. ENHANCED EMBEDDING GENERATION WITH CLASS CONTEXT
+# 2. EMBEDDING GENERATION WITH CLASS CONTEXT
 # =====================================================
 
 class ClassAwareEmbeddingGenerator:
     def __init__(self, model_name='all-MiniLM-L6-v2'):
         """
-        Initialize embedding generator with sentence-transformers model
+        Initialize embedding generator
+        Popular models:
+        - 'all-MiniLM-L6-v2': Fast and good performance (384 dim)
+        - 'all-mpnet-base-v2': Better performance but slower (768 dim)
+        - 'all-distilroberta-v1': Good balance (768 dim)
         """
         print(f"Loading embedding model: {model_name}")
         self.model = SentenceTransformer(model_name)
@@ -322,14 +163,13 @@ class ClassAwareEmbeddingGenerator:
         self.class_embeddings = None
         self.class_descriptions = None
     
-    def generate_class_embeddings(self, class_definitions):
+    def generate_class_embeddings(self, class_descriptions):
         """Generate embeddings for class descriptions"""
         print("Generating class description embeddings...")
-        descriptions = class_definitions.get_all_descriptions()
-        self.class_descriptions = descriptions
+        self.class_descriptions = class_descriptions
         
         self.class_embeddings = self.model.encode(
-            descriptions,
+            class_descriptions,
             show_progress_bar=True,
             convert_to_numpy=True
         )
@@ -378,7 +218,7 @@ class ClassAwareEmbeddingGenerator:
         return enhanced_features
 
 # =====================================================
-# 4. ENHANCED PYTORCH DATASET
+# 3. PYTORCH DATASET
 # =====================================================
 
 class EnhancedEmbeddingDataset(Dataset):
@@ -401,16 +241,15 @@ class EnhancedEmbeddingDataset(Dataset):
             return self.embeddings[idx], self.labels[idx]
 
 # =====================================================
-# 5. CLASS-AWARE NEURAL NETWORK MODELS
+# 4. NEURAL NETWORK MODELS
 # =====================================================
 
 class ClassAwareMLPClassifier(nn.Module):
     """MLP with class description awareness"""
-    def __init__(self, input_dim, num_classes, class_embedding_dim, hidden_dims=[512, 256, 128], dropout=0.3):
+    def __init__(self, input_dim, num_classes, hidden_dims=[512, 256, 128], dropout=0.3):
         super(ClassAwareMLPClassifier, self).__init__()
         
         self.num_classes = num_classes
-        self.class_embedding_dim = class_embedding_dim
         
         # Main feature processing
         layers = []
@@ -446,7 +285,7 @@ class ClassAwareMLPClassifier(nn.Module):
         features = self.feature_extractor(x)
         
         # Add batch and sequence dimensions for attention
-        features_expanded = features.unsqueeze(1)  # [batch, 1, hidden_dim]
+        features_expanded = features.unsqueeze(1)
         
         # Self-attention
         attended_features, _ = self.class_attention(
@@ -458,13 +297,9 @@ class ClassAwareMLPClassifier(nn.Module):
         
         # If class similarities are provided, incorporate them
         if class_similarities is not None:
-            # Weight features by class similarities
             similarity_weights = F.softmax(class_similarities, dim=1)
-            similarity_weights = similarity_weights.unsqueeze(1)  # [batch, 1, num_classes]
-            
-            # Weighted combination (simplified approach)
             attended_features = attended_features + 0.1 * torch.sum(
-                similarity_weights * class_similarities.unsqueeze(1), dim=2
+                similarity_weights.unsqueeze(1) * class_similarities.unsqueeze(1), dim=2
             )
         
         # Final classification
@@ -476,8 +311,12 @@ class ClassAwareLSTMClassifier(nn.Module):
     def __init__(self, input_dim, hidden_dim, num_layers, num_classes, dropout=0.3):
         super(ClassAwareLSTMClassifier, self).__init__()
         
+        # Determine sequence length
+        self.seq_len = max(8, min(16, input_dim // 32))
+        self.feature_dim = input_dim // self.seq_len
+        
         # Input processing
-        self.input_projection = nn.Linear(input_dim, hidden_dim)
+        self.input_projection = nn.Linear(self.feature_dim, hidden_dim)
         
         # LSTM layers
         self.lstm = nn.LSTM(
@@ -512,13 +351,17 @@ class ClassAwareLSTMClassifier(nn.Module):
     def forward(self, x, class_similarities=None):
         batch_size = x.size(0)
         
-        # Create sequence from embeddings
-        seq_len = max(8, x.size(1) // 8)
-        if x.size(1) % seq_len != 0:
-            padding_size = seq_len - (x.size(1) % seq_len)
-            x = F.pad(x, (0, padding_size))
+        # Reshape to sequence
+        total_features = x.size(1)
+        features_per_step = total_features // self.seq_len
         
-        x = x[:, :seq_len * 8].view(batch_size, seq_len, 8)
+        if total_features % self.seq_len != 0:
+            # Pad to make it divisible
+            padding_size = self.seq_len - (total_features % self.seq_len)
+            x = F.pad(x, (0, padding_size * features_per_step))
+            features_per_step = x.size(1) // self.seq_len
+        
+        x = x.view(batch_size, self.seq_len, features_per_step)
         
         # Project to hidden dimension
         x = self.input_projection(x)
@@ -547,12 +390,15 @@ class ClassAwareCNNClassifier(nn.Module):
         super(ClassAwareCNNClassifier, self).__init__()
         
         self.num_classes = num_classes
-        self.feature_size = int((input_dim - num_classes) ** 0.5)
         
-        # Adjust input dimension
-        actual_input_dim = input_dim - num_classes  # Separate class similarities
-        if self.feature_size ** 2 != actual_input_dim:
-            self.input_projection = nn.Linear(actual_input_dim, self.feature_size ** 2)
+        # Calculate appropriate 2D dimensions
+        # Try to make a roughly square matrix
+        self.height = int(np.sqrt(input_dim))
+        self.width = input_dim // self.height
+        
+        # Adjust if not perfect
+        if self.height * self.width != input_dim:
+            self.input_projection = nn.Linear(input_dim, self.height * self.width)
         else:
             self.input_projection = None
         
@@ -595,25 +441,15 @@ class ClassAwareCNNClassifier(nn.Module):
     def forward(self, x, class_similarities=None):
         batch_size = x.size(0)
         
-        # Separate embeddings and class similarities if concatenated
-        if class_similarities is None and x.size(1) > self.feature_size ** 2:
-            embeddings = x[:, :-self.num_classes]
-            class_similarities = x[:, -self.num_classes:]
-        else:
-            embeddings = x
-        
-        # Project embeddings if needed
+        # Project if needed
         if self.input_projection:
-            embeddings = self.input_projection(embeddings)
-            dim = self.feature_size
-        else:
-            dim = self.feature_size
+            x = self.input_projection(x)
         
         # Reshape to 2D
-        embeddings = embeddings.view(batch_size, 1, dim, dim)
+        x = x.view(batch_size, 1, self.height, self.width)
         
         # Apply convolutions
-        conv_features = self.conv_layers(embeddings)
+        conv_features = self.conv_layers(x)
         conv_features = conv_features.view(batch_size, -1)
         
         # Integrate class similarities
@@ -621,7 +457,6 @@ class ClassAwareCNNClassifier(nn.Module):
             class_features = self.class_integration(class_similarities)
             combined_features = torch.cat([conv_features, class_features], dim=1)
         else:
-            # Add zero features if no class similarities
             zero_class_features = torch.zeros(batch_size, 128, device=conv_features.device)
             combined_features = torch.cat([conv_features, zero_class_features], dim=1)
         
@@ -630,10 +465,10 @@ class ClassAwareCNNClassifier(nn.Module):
         return output
 
 # =====================================================
-# 6. ENHANCED TRAINING AND EVALUATION
+# 5. TRAINING AND EVALUATION
 # =====================================================
 
-class ClassAwareModelTrainer:
+class ModelTrainer:
     def __init__(self, model, device='cuda' if torch.cuda.is_available() else 'cpu'):
         self.model = model.to(device)
         self.device = device
@@ -770,16 +605,14 @@ class ClassAwareModelTrainer:
         return np.array(all_predictions), np.array(all_labels), np.array(all_probabilities)
 
 # =====================================================
-# 7. VISUALIZATION AND ANALYSIS
+# 6. VISUALIZATION AND ANALYSIS
 # =====================================================
 
 def plot_class_similarities(text_embeddings, class_embeddings, class_names, sample_size=100):
     """Plot similarity heatmap between sample texts and class descriptions"""
-    # Take a random sample for visualization
     sample_indices = np.random.choice(len(text_embeddings), min(sample_size, len(text_embeddings)), replace=False)
     sample_embeddings = text_embeddings[sample_indices]
     
-    # Compute similarities
     similarities = cosine_similarity(sample_embeddings, class_embeddings)
     
     plt.figure(figsize=(12, 8))
@@ -791,43 +624,19 @@ def plot_class_similarities(text_embeddings, class_embeddings, class_names, samp
     plt.title('Text-to-Class Description Similarities')
     plt.xlabel('Class Descriptions')
     plt.ylabel('Sample Texts')
+    plt.xticks(rotation=45, ha='right')
     plt.tight_layout()
     plt.show()
-
-def analyze_class_awareness(predictions, true_labels, class_similarities, class_names):
-    """Analyze how class similarities correlate with predictions"""
-    correct_mask = predictions == true_labels
-    
-    print("\nClass Awareness Analysis:")
-    print("=" * 50)
-    
-    for i, class_name in enumerate(class_names):
-        class_mask = true_labels == i
-        if np.sum(class_mask) == 0:
-            continue
-            
-        # Average similarity for this class
-        avg_similarity = np.mean(class_similarities[class_mask, i])
-        
-        # Accuracy for this class
-        class_accuracy = np.mean(correct_mask[class_mask])
-        
-        print(f"{class_name}:")
-        print(f"  Average similarity to description: {avg_similarity:.4f}")
-        print(f"  Classification accuracy: {class_accuracy:.4f}")
-        print()
 
 def plot_training_history(trainer, model_name):
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 5))
     
-    # Plot training loss
     ax1.plot(trainer.train_losses)
     ax1.set_title(f'{model_name} - Training Loss')
     ax1.set_xlabel('Epoch')
     ax1.set_ylabel('Loss')
     ax1.grid(True)
     
-    # Plot validation accuracy
     ax2.plot(trainer.val_accuracies)
     ax2.set_title(f'{model_name} - Validation Accuracy')
     ax2.set_xlabel('Epoch')
@@ -855,106 +664,135 @@ def analyze_predictions(y_true, y_pred, y_prob, class_names, model_name):
     print(f"\n{model_name} - Detailed Results:")
     print("=" * 50)
     
-    # Accuracy
     accuracy = accuracy_score(y_true, y_pred)
     print(f"Overall Accuracy: {accuracy:.4f}")
     
-    # Classification report
     print("\nClassification Report:")
     print(classification_report(y_true, y_pred, target_names=class_names))
 
+def analyze_class_awareness(predictions, true_labels, class_similarities, class_names):
+    """Analyze how class similarities correlate with predictions"""
+    correct_mask = predictions == true_labels
+    
+    print("\nClass Awareness Analysis:")
+    print("=" * 50)
+    
+    for i, class_name in enumerate(class_names):
+        class_mask = true_labels == i
+        if np.sum(class_mask) == 0:
+            continue
+            
+        avg_similarity = np.mean(class_similarities[class_mask, i])
+        class_accuracy = np.mean(correct_mask[class_mask])
+        
+        print(f"{class_name}:")
+        print(f"  Average similarity to description: {avg_similarity:.4f}")
+        print(f"  Classification accuracy: {class_accuracy:.4f}")
+        print()
+
 # =====================================================
-# 8. MAIN EXECUTION FUNCTION
+# 7. MAIN TRAINING FUNCTION
 # =====================================================
 
-def main():
-    print("Class-Aware Incident Classification with Embeddings + PyTorch")
-    print("=" * 70)
+def train_incident_classifier(df, issue_summary, text_column='combined', class_column='class', 
+                             embedding_model='all-MiniLM-L6-v2', test_size=0.2, val_size=0.2,
+                             batch_size=32, num_epochs=30, lr=0.001):
+    """
+    Main function to train incident classifier with existing data
     
-    # 1. Initialize class definitions
-    print("\n1. Initializing class definitions...")
-    class_definitions = IncidentClassDefinitions()
+    Args:
+        df: DataFrame with incident data
+        issue_summary: Dictionary with class definitions
+        text_column: Column name containing text to classify
+        class_column: Column name containing class labels
+        embedding_model: Name of sentence-transformers model to use
+        test_size: Proportion of data for testing
+        val_size: Proportion of training data for validation
+        batch_size: Batch size for training
+        num_epochs: Number of training epochs
+        lr: Learning rate
     
-    print("Class Definitions:")
-    for i, (class_name, definition) in enumerate(class_definitions.class_definitions.items()):
-        print(f"\n{i+1}. {class_name}:")
-        print(f"   Description: {definition['description'][:100]}...")
-        print(f"   Keywords: {', '.join(definition['keywords'][:5])}...")
+    Returns:
+        Dictionary with results including trained models and metrics
+    """
     
-    # 2. Generate fake data
-    print(f"\n2. Generating fake incident data...")
-    generator = IncidentDataGenerator(class_definitions)
-    df = generator.generate_fake_data(n_samples=2000)
+    print("Class-Aware Incident Classification with Existing Data")
+    print("=" * 60)
     
-    print(f"Generated {len(df)} samples across {len(class_definitions.classes)} classes")
-    print("\nClass distribution:")
-    print(df['class'].value_counts().sort_index())
+    # 1. Preprocess data
+    print("\n1. Preprocessing data...")
+    preprocessor = DataPreprocessor(df, issue_summary, text_column, class_column)
     
-    # Display examples
-    print("\nExample incidents:")
-    for i, class_name in enumerate(class_definitions.classes[:3]):
-        example = df[df['class'] == class_name].iloc[0]
-        print(f"\n{class_name}:")
-        print(f"Combined text: {example['combined'][:150]}...")
+    # Display class information
+    print("\nClass Definitions:")
+    for i, class_name in enumerate(preprocessor.classes):
+        class_info = preprocessor.get_class_info(class_name)
+        description = class_info.get("description", "No description")
+        print(f"{i+1}. {class_name}:")
+        print(f"   Description: {description[:100]}...")
+        if "keywords" in class_info:
+            print(f"   Keywords: {', '.join(class_info['keywords'][:5])}...")
+        print()
     
-    # 3. Generate embeddings with class awareness
-    print("\n3. Generating class-aware embeddings...")
-    embedding_generator = ClassAwareEmbeddingGenerator('all-MiniLM-L6-v2')
+    # 2. Generate embeddings
+    print("2. Generating embeddings...")
+    embedding_generator = ClassAwareEmbeddingGenerator(embedding_model)
     
     # Generate class description embeddings
-    class_embeddings = embedding_generator.generate_class_embeddings(class_definitions)
+    class_descriptions = preprocessor.get_class_descriptions()
+    class_embeddings = embedding_generator.generate_class_embeddings(class_descriptions)
     
     # Generate text embeddings
-    text_embeddings = embedding_generator.generate_text_embeddings(df['combined'].tolist())
+    texts = preprocessor.df[text_column].tolist()
+    text_embeddings = embedding_generator.generate_text_embeddings(texts)
     
-    # Create enhanced features with class similarities
+    # Create enhanced features
     enhanced_features = embedding_generator.create_enhanced_features(text_embeddings)
     
     print(f"Text embeddings shape: {text_embeddings.shape}")
     print(f"Class embeddings shape: {class_embeddings.shape}")
     print(f"Enhanced features shape: {enhanced_features.shape}")
     
-    # 4. Prepare data for training
-    print("\n4. Preparing data for training...")
+    # 3. Prepare data for training
+    print("\n3. Preparing data for training...")
     
-    # Get class similarities for analysis
     class_similarities = embedding_generator.compute_class_similarities(text_embeddings)
+    labels = preprocessor.df['class_idx'].values
     
+    # Split data
     X_train, X_test, y_train, y_test, sim_train, sim_test = train_test_split(
-        enhanced_features, df['class_idx'].values, class_similarities,
-        test_size=0.2, 
+        enhanced_features, labels, class_similarities,
+        test_size=test_size, 
         random_state=42, 
-        stratify=df['class_idx'].values
+        stratify=labels
     )
     
     X_train, X_val, y_train, y_val, sim_train, sim_val = train_test_split(
         X_train, y_train, sim_train,
-        test_size=0.2, 
+        test_size=val_size, 
         random_state=42, 
         stratify=y_train
     )
     
     print(f"Train: {X_train.shape[0]}, Val: {X_val.shape[0]}, Test: {X_test.shape[0]}")
     
-    # Create datasets with class similarities
+    # Create datasets
     train_dataset = EnhancedEmbeddingDataset(X_train, y_train, sim_train)
     val_dataset = EnhancedEmbeddingDataset(X_val, y_val, sim_val)
     test_dataset = EnhancedEmbeddingDataset(X_test, y_test, sim_test)
     
-    batch_size = 32
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
     
-    # 5. Train class-aware models
-    print("\n5. Training class-aware models...")
+    # 4. Train models
+    print("\n4. Training models...")
     
     input_dim = enhanced_features.shape[1]
-    num_classes = len(class_definitions.classes)
-    class_embedding_dim = class_embeddings.shape[1]
+    num_classes = len(preprocessor.classes)
     
     models_to_train = {
-        'ClassAware-MLP': ClassAwareMLPClassifier(input_dim, num_classes, class_embedding_dim),
+        'ClassAware-MLP': ClassAwareMLPClassifier(input_dim, num_classes),
         'ClassAware-LSTM': ClassAwareLSTMClassifier(input_dim, 128, 2, num_classes),
         'ClassAware-CNN': ClassAwareCNNClassifier(input_dim, num_classes)
     }
@@ -963,12 +801,12 @@ def main():
     
     for model_name, model in models_to_train.items():
         print(f"\nTraining {model_name}...")
-        trainer = ClassAwareModelTrainer(model)
+        trainer = ModelTrainer(model)
         
         # Train model
         best_val_acc = trainer.train_model(
             train_loader, val_loader, 
-            num_epochs=30, lr=0.001
+            num_epochs=num_epochs, lr=lr
         )
         
         # Evaluate on test set
@@ -978,13 +816,14 @@ def main():
         results[model_name] = {
             'trainer': trainer,
             'test_accuracy': test_acc,
-            'predictions': (y_pred, y_true, y_prob)
+            'predictions': (y_pred, y_true, y_prob),
+            'best_val_accuracy': best_val_acc
         }
         
         print(f"{model_name} Test Accuracy: {test_acc:.2f}%")
     
-    # 6. Compare results and analyze class awareness
-    print("\n6. Model Comparison:")
+    # 5. Analysis and comparison
+    print("\n5. Model Comparison:")
     print("=" * 40)
     for model_name, result in results.items():
         print(f"{model_name}: {result['test_accuracy']:.2f}%")
@@ -993,70 +832,146 @@ def main():
     best_model_name = max(results.keys(), key=lambda k: results[k]['test_accuracy'])
     print(f"\nBest Model: {best_model_name}")
     
-    # 7. Detailed analysis
-    print(f"\n7. Detailed analysis of {best_model_name}:")
+    # 6. Detailed analysis of best model
+    print(f"\n6. Detailed analysis of {best_model_name}:")
     best_result = results[best_model_name]
     y_pred, y_true, y_prob = best_result['predictions']
     
-    analyze_predictions(y_true, y_pred, y_prob, class_definitions.classes, best_model_name)
-    analyze_class_awareness(y_pred, y_true, sim_test, class_definitions.classes)
+    analyze_predictions(y_true, y_pred, y_prob, preprocessor.classes, best_model_name)
+    analyze_class_awareness(y_pred, y_true, sim_test, preprocessor.classes)
     
-    # 8. Visualizations
-    print("\n8. Generating visualizations...")
+    # 7. Visualizations
+    print("\n7. Generating visualizations...")
     
-    # Plot class similarities
-    plot_class_similarities(text_embeddings, class_embeddings, class_definitions.classes)
-    
-    # Plot training history for best model
+    plot_class_similarities(text_embeddings, class_embeddings, preprocessor.classes)
     plot_training_history(best_result['trainer'], best_model_name)
+    plot_confusion_matrix(y_true, y_pred, preprocessor.classes, best_model_name)
     
-    # Plot confusion matrix
-    plot_confusion_matrix(y_true, y_pred, class_definitions.classes, best_model_name)
+    # 8. Save best model
+    print(f"\n8. Saving best model ({best_model_name})...")
+    model_save_path = f'best_incident_classifier_{best_model_name.replace("-", "_").lower()}.pth'
     
-    # 9. Save the best model
-    print(f"\n9. Saving best model ({best_model_name})...")
     torch.save({
         'model_state_dict': best_result['trainer'].model.state_dict(),
         'model_class': best_result['trainer'].model.__class__.__name__,
-        'classes': class_definitions.classes,
-        'class_definitions': class_definitions.class_definitions,
-        'embedding_model': 'all-MiniLM-L6-v2',
+        'preprocessor': preprocessor,
+        'embedding_generator': embedding_generator,
+        'class_embeddings': class_embeddings,
+        'classes': preprocessor.classes,
+        'class_definitions': preprocessor.class_definitions,
+        'embedding_model': embedding_model,
         'input_dim': input_dim,
         'num_classes': num_classes,
-        'class_embeddings': class_embeddings
-    }, f'best_class_aware_classifier_{best_model_name.replace("-", "_").lower()}.pth')
+        'label_encoder': preprocessor.label_encoder
+    }, model_save_path)
     
+    print(f"Model saved to: {model_save_path}")
     print("Training completed!")
     
-    return results, class_definitions, embedding_generator
+    return {
+        'results': results,
+        'best_model': best_model_name,
+        'preprocessor': preprocessor,
+        'embedding_generator': embedding_generator,
+        'model_save_path': model_save_path
+    }
 
-# Example usage for inference with class awareness
-def class_aware_inference_example(model_path, embedding_generator, text, class_definitions):
-    """Example of how to use the trained class-aware model for inference"""
+# =====================================================
+# 8. INFERENCE FUNCTION
+# =====================================================
+
+def predict_incident_class(model_path, text, top_k=3):
+    """
+    Predict incident class for new text using trained model
     
-    # Load model checkpoint
+    Args:
+        model_path: Path to saved model
+        text: Text to classify
+        top_k: Number of top predictions to return
+    
+    Returns:
+        Dictionary with predictions and confidences
+    """
+    
+    # Load model and components
     checkpoint = torch.load(model_path, map_location='cpu')
     
-    # Generate text embedding
+    # Get components
+    embedding_generator = checkpoint['embedding_generator']
+    preprocessor = checkpoint['preprocessor']
+    classes = checkpoint['classes']
+    
+    # Generate embedding for new text
     text_embedding = embedding_generator.generate_text_embeddings([text])
-    
-    # Create enhanced features
     enhanced_features = embedding_generator.create_enhanced_features(text_embedding)
-    
-    # Get class similarities
     class_similarities = embedding_generator.compute_class_similarities(text_embedding)
     
     print(f"Text: {text}")
-    print(f"Enhanced features shape: {enhanced_features.shape}")
-    print("\nClass Similarities:")
-    for i, class_name in enumerate(class_definitions.classes):
+    print(f"\nClass Similarities:")
+    for i, class_name in enumerate(classes):
         similarity = class_similarities[0, i]
         print(f"  {class_name}: {similarity:.4f}")
     
-    print("\nPredicted class would be determined using the saved model...")
+    # Here you would load the actual model and make predictions
+    # This is a simplified example showing the process
+    
+    # Get top similarities as proxy for predictions
+    top_indices = np.argsort(class_similarities[0])[-top_k:][::-1]
+    
+    predictions = []
+    for idx in top_indices:
+        predictions.append({
+            'class': classes[idx],
+            'confidence': float(class_similarities[0, idx]),
+            'description': preprocessor.class_definitions[classes[idx]]['description']
+        })
+    
+    return {
+        'predictions': predictions,
+        'enhanced_features_shape': enhanced_features.shape,
+        'text_processed': True
+    }
+
+# =====================================================
+# 9. EXAMPLE USAGE
+# =====================================================
+
+"""
+Example usage:
+
+# Assuming you have your dataframe (df) and issue_summary dictionary ready:
+
+# Example issue_summary format:
+issue_summary = {
+    "Network Issue": {
+        "description": "Problems related to network connectivity, internet outages, VPN failures, router issues, and infrastructure problems",
+        "keywords": ["network", "connectivity", "internet", "VPN", "router", "infrastructure"]
+    },
+    "Security Breach": "Security incidents involving unauthorized access, malware, phishing attacks, and data breaches",
+    "Hardware Failure": {
+        "description": "Physical hardware problems including server failures, disk crashes, and component malfunctions",
+        "keywords": ["hardware", "server", "disk", "physical", "component"]
+    },
+    # ... more classes
+}
+
+# Train the classifier
+results = train_incident_classifier(
+    df=your_dataframe, 
+    issue_summary=your_issue_summary,
+    text_column='combined',  # or whatever your text column is named
+    class_column='class',    # or whatever your class column is named
+    num_epochs=30,
+    batch_size=32
+)
+
+# Use for prediction
+predictions = predict_incident_class(
+    model_path=results['model_save_path'],
+    text="Server experiencing hardware malfunction causing service outage"
+)
+"""
 
 if __name__ == "__main__":
-    # Install required packages first:
-    # pip install torch sentence-transformers pandas scikit-learn matplotlib seaborn tqdm
-    
-    results, class_definitions, embedding_gen = main()
+    print("Incident Classification System Ready!")
+    print("Please provide your dataframe (df) and issue_summary dictionary to use train_incident_classifier()")
