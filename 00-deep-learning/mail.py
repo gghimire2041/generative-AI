@@ -1,16 +1,17 @@
 """
-Incident Classification System using Pre-trained Embeddings + PyTorch with Existing Data
-========================================================================================
+Incident Classification System using Custom Embedding Function + PyTorch with Existing Data
+==========================================================================================
 
-This implementation uses existing incident data and issue class definitions to train
-a classification model that leverages class descriptions for better context understanding.
+This implementation uses your existing get_embedding function to create text embeddings,
+then feeds those embeddings along with class description context into PyTorch neural networks.
 
 Requirements:
 - df: DataFrame with incident data (should have 'combined' column and class labels)
 - issue_summary: Dictionary with class names and their descriptions
+- get_embedding: Your existing embedding function
 
 Usage:
-    results = train_incident_classifier(df, issue_summary)
+    results = train_incident_classifier(df, issue_summary, get_embedding)
 """
 
 import torch
@@ -24,7 +25,6 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.preprocessing import LabelEncoder
-from sentence_transformers import SentenceTransformer
 import matplotlib.pyplot as plt
 import seaborn as sns
 from tqdm import tqdm
@@ -143,36 +143,90 @@ class DataPreprocessor:
         return self.class_definitions.get(class_name, {})
 
 # =====================================================
-# 2. EMBEDDING GENERATION WITH CLASS CONTEXT
+# 2. EMBEDDING GENERATION WITH CUSTOM FUNCTION
 # =====================================================
 
-class ClassAwareEmbeddingGenerator:
-    def __init__(self, model_name='all-MiniLM-L6-v2'):
+class CustomEmbeddingGenerator:
+    def __init__(self, get_embedding_func):
         """
-        Initialize embedding generator
-        Popular models:
-        - 'all-MiniLM-L6-v2': Fast and good performance (384 dim)
-        - 'all-mpnet-base-v2': Better performance but slower (768 dim)
-        - 'all-distilroberta-v1': Good balance (768 dim)
+        Initialize embedding generator with your custom embedding function
+        
+        Args:
+            get_embedding_func: Your existing embedding function
+                Should accept text (string or list of strings) and return embeddings
         """
-        print(f"Loading embedding model: {model_name}")
-        self.model = SentenceTransformer(model_name)
-        self.embedding_dim = self.model.get_sentence_embedding_dimension()
+        self.get_embedding = get_embedding_func
+        
+        # Test the function to get embedding dimension
+        print("Testing embedding function...")
+        test_embedding = self._get_single_embedding("test")
+        self.embedding_dim = len(test_embedding) if hasattr(test_embedding, '__len__') else test_embedding.shape[-1]
         print(f"Embedding dimension: {self.embedding_dim}")
         
         self.class_embeddings = None
         self.class_descriptions = None
+    
+    def _get_single_embedding(self, text):
+        """Get embedding for a single text"""
+        try:
+            # Try calling the function with single text
+            embedding = self.get_embedding(text)
+            
+            # Convert to numpy if needed
+            if hasattr(embedding, 'numpy'):
+                embedding = embedding.numpy()
+            elif not isinstance(embedding, np.ndarray):
+                embedding = np.array(embedding)
+            
+            # Ensure 1D
+            if embedding.ndim > 1:
+                embedding = embedding.flatten()
+                
+            return embedding
+            
+        except Exception as e:
+            print(f"Error with embedding function: {e}")
+            print(f"Input type: {type(text)}")
+            print(f"Input: {text}")
+            raise
+    
+    def _get_batch_embeddings(self, texts):
+        """Get embeddings for a batch of texts"""
+        try:
+            # Try batch processing first
+            embeddings = self.get_embedding(texts)
+            
+            # Convert to numpy if needed
+            if hasattr(embeddings, 'numpy'):
+                embeddings = embeddings.numpy()
+            elif not isinstance(embeddings, np.ndarray):
+                embeddings = np.array(embeddings)
+            
+            # Ensure correct shape
+            if embeddings.ndim == 1:
+                # Single embedding returned, reshape
+                embeddings = embeddings.reshape(1, -1)
+            
+            return embeddings
+            
+        except Exception as e:
+            print(f"Batch processing failed: {e}")
+            print("Falling back to individual processing...")
+            
+            # Fall back to individual processing
+            embeddings = []
+            for text in texts:
+                emb = self._get_single_embedding(text)
+                embeddings.append(emb)
+            
+            return np.array(embeddings)
     
     def generate_class_embeddings(self, class_descriptions):
         """Generate embeddings for class descriptions"""
         print("Generating class description embeddings...")
         self.class_descriptions = class_descriptions
         
-        self.class_embeddings = self.model.encode(
-            class_descriptions,
-            show_progress_bar=True,
-            convert_to_numpy=True
-        )
+        self.class_embeddings = self._get_batch_embeddings(class_descriptions)
         
         print(f"Class embeddings shape: {self.class_embeddings.shape}")
         return self.class_embeddings
@@ -180,12 +234,23 @@ class ClassAwareEmbeddingGenerator:
     def generate_text_embeddings(self, texts, batch_size=32):
         """Generate embeddings for incident texts"""
         print(f"Generating text embeddings for {len(texts)} texts...")
-        embeddings = self.model.encode(
-            texts,
-            batch_size=batch_size,
-            show_progress_bar=True,
-            convert_to_numpy=True
-        )
+        
+        if len(texts) <= batch_size:
+            # Process all at once
+            embeddings = self._get_batch_embeddings(texts)
+        else:
+            # Process in batches
+            embeddings = []
+            
+            with tqdm(range(0, len(texts), batch_size), desc="Generating embeddings") as pbar:
+                for i in pbar:
+                    batch_texts = texts[i:i + batch_size]
+                    batch_embeddings = self._get_batch_embeddings(batch_texts)
+                    embeddings.append(batch_embeddings)
+            
+            embeddings = np.vstack(embeddings)
+        
+        print(f"Text embeddings shape: {embeddings.shape}")
         return embeddings
     
     def compute_class_similarities(self, text_embeddings):
@@ -206,12 +271,19 @@ class ClassAwareEmbeddingGenerator:
             features.append(similarities)
             
             # Add normalized similarities
-            normalized_similarities = similarities / np.linalg.norm(similarities, axis=1, keepdims=True)
+            similarity_norms = np.linalg.norm(similarities, axis=1, keepdims=True)
+            similarity_norms = np.where(similarity_norms == 0, 1, similarity_norms)  # Avoid division by zero
+            normalized_similarities = similarities / similarity_norms
             features.append(normalized_similarities)
             
             # Add max similarity scores
             max_similarities = np.max(similarities, axis=1, keepdims=True)
             features.append(max_similarities)
+            
+            # Add similarity statistics
+            mean_similarities = np.mean(similarities, axis=1, keepdims=True)
+            std_similarities = np.std(similarities, axis=1, keepdims=True)
+            features.extend([mean_similarities, std_similarities])
         
         enhanced_features = np.concatenate(features, axis=1)
         print(f"Enhanced features shape: {enhanced_features.shape}")
@@ -311,12 +383,13 @@ class ClassAwareLSTMClassifier(nn.Module):
     def __init__(self, input_dim, hidden_dim, num_layers, num_classes, dropout=0.3):
         super(ClassAwareLSTMClassifier, self).__init__()
         
-        # Determine sequence length
+        # Determine sequence length based on input dimension
         self.seq_len = max(8, min(16, input_dim // 32))
-        self.feature_dim = input_dim // self.seq_len
+        self.feature_dim = max(8, input_dim // self.seq_len)
         
         # Input processing
-        self.input_projection = nn.Linear(self.feature_dim, hidden_dim)
+        self.input_projection = nn.Linear(input_dim, self.seq_len * self.feature_dim)
+        self.feature_projection = nn.Linear(self.feature_dim, hidden_dim)
         
         # LSTM layers
         self.lstm = nn.LSTM(
@@ -351,20 +424,12 @@ class ClassAwareLSTMClassifier(nn.Module):
     def forward(self, x, class_similarities=None):
         batch_size = x.size(0)
         
-        # Reshape to sequence
-        total_features = x.size(1)
-        features_per_step = total_features // self.seq_len
-        
-        if total_features % self.seq_len != 0:
-            # Pad to make it divisible
-            padding_size = self.seq_len - (total_features % self.seq_len)
-            x = F.pad(x, (0, padding_size * features_per_step))
-            features_per_step = x.size(1) // self.seq_len
-        
-        x = x.view(batch_size, self.seq_len, features_per_step)
-        
-        # Project to hidden dimension
+        # Project to desired sequence length
         x = self.input_projection(x)
+        x = x.view(batch_size, self.seq_len, self.feature_dim)
+        
+        # Project features to hidden dimension
+        x = self.feature_projection(x)
         
         # LSTM processing
         lstm_out, _ = self.lstm(x)
@@ -392,13 +457,13 @@ class ClassAwareCNNClassifier(nn.Module):
         self.num_classes = num_classes
         
         # Calculate appropriate 2D dimensions
-        # Try to make a roughly square matrix
         self.height = int(np.sqrt(input_dim))
         self.width = input_dim // self.height
         
-        # Adjust if not perfect
-        if self.height * self.width != input_dim:
-            self.input_projection = nn.Linear(input_dim, self.height * self.width)
+        # Adjust if not perfect fit
+        target_size = self.height * self.width
+        if target_size != input_dim:
+            self.input_projection = nn.Linear(input_dim, target_size)
         else:
             self.input_projection = None
         
@@ -514,6 +579,10 @@ class ModelTrainer:
                     
                     loss = criterion(outputs, labels)
                     loss.backward()
+                    
+                    # Gradient clipping for stability
+                    torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
+                    
                     optimizer.step()
                     
                     train_loss += loss.item()
@@ -694,18 +763,18 @@ def analyze_class_awareness(predictions, true_labels, class_similarities, class_
 # 7. MAIN TRAINING FUNCTION
 # =====================================================
 
-def train_incident_classifier(df, issue_summary, text_column='combined', class_column='class', 
-                             embedding_model='all-MiniLM-L6-v2', test_size=0.2, val_size=0.2,
+def train_incident_classifier(df, issue_summary, get_embedding_func, text_column='combined', 
+                             class_column='class', test_size=0.2, val_size=0.2,
                              batch_size=32, num_epochs=30, lr=0.001):
     """
-    Main function to train incident classifier with existing data
+    Main function to train incident classifier with existing data and custom embedding function
     
     Args:
         df: DataFrame with incident data
         issue_summary: Dictionary with class definitions
+        get_embedding_func: Your existing embedding function
         text_column: Column name containing text to classify
         class_column: Column name containing class labels
-        embedding_model: Name of sentence-transformers model to use
         test_size: Proportion of data for testing
         val_size: Proportion of training data for validation
         batch_size: Batch size for training
@@ -716,8 +785,8 @@ def train_incident_classifier(df, issue_summary, text_column='combined', class_c
         Dictionary with results including trained models and metrics
     """
     
-    print("Class-Aware Incident Classification with Existing Data")
-    print("=" * 60)
+    print("Class-Aware Incident Classification with Custom Embedding Function")
+    print("=" * 70)
     
     # 1. Preprocess data
     print("\n1. Preprocessing data...")
@@ -734,9 +803,9 @@ def train_incident_classifier(df, issue_summary, text_column='combined', class_c
             print(f"   Keywords: {', '.join(class_info['keywords'][:5])}...")
         print()
     
-    # 2. Generate embeddings
-    print("2. Generating embeddings...")
-    embedding_generator = ClassAwareEmbeddingGenerator(embedding_model)
+    # 2. Generate embeddings using your function
+    print("2. Generating embeddings using custom function...")
+    embedding_generator = CustomEmbeddingGenerator(get_embedding_func)
     
     # Generate class description embeddings
     class_descriptions = preprocessor.get_class_descriptions()
@@ -859,7 +928,6 @@ def train_incident_classifier(df, issue_summary, text_column='combined', class_c
         'class_embeddings': class_embeddings,
         'classes': preprocessor.classes,
         'class_definitions': preprocessor.class_definitions,
-        'embedding_model': embedding_model,
         'input_dim': input_dim,
         'num_classes': num_classes,
         'label_encoder': preprocessor.label_encoder
@@ -880,13 +948,14 @@ def train_incident_classifier(df, issue_summary, text_column='combined', class_c
 # 8. INFERENCE FUNCTION
 # =====================================================
 
-def predict_incident_class(model_path, text, top_k=3):
+def predict_incident_class(model_path, text, get_embedding_func, top_k=3):
     """
     Predict incident class for new text using trained model
     
     Args:
         model_path: Path to saved model
         text: Text to classify
+        get_embedding_func: Your embedding function
         top_k: Number of top predictions to return
     
     Returns:
@@ -897,9 +966,14 @@ def predict_incident_class(model_path, text, top_k=3):
     checkpoint = torch.load(model_path, map_location='cpu')
     
     # Get components
-    embedding_generator = checkpoint['embedding_generator']
     preprocessor = checkpoint['preprocessor']
     classes = checkpoint['classes']
+    class_embeddings = checkpoint['class_embeddings']
+    
+    # Create new embedding generator with your function
+    embedding_generator = CustomEmbeddingGenerator(get_embedding_func)
+    embedding_generator.class_embeddings = class_embeddings
+    embedding_generator.class_descriptions = preprocessor.get_class_descriptions()
     
     # Generate embedding for new text
     text_embedding = embedding_generator.generate_text_embeddings([text])
@@ -911,9 +985,6 @@ def predict_incident_class(model_path, text, top_k=3):
     for i, class_name in enumerate(classes):
         similarity = class_similarities[0, i]
         print(f"  {class_name}: {similarity:.4f}")
-    
-    # Here you would load the actual model and make predictions
-    # This is a simplified example showing the process
     
     # Get top similarities as proxy for predictions
     top_indices = np.argsort(class_similarities[0])[-top_k:][::-1]
@@ -939,18 +1010,26 @@ def predict_incident_class(model_path, text, top_k=3):
 """
 Example usage:
 
-# Assuming you have your dataframe (df) and issue_summary dictionary ready:
+# Define your embedding function (example)
+def get_embedding(text):
+    # Your existing embedding logic here
+    # Should return numpy array or similar
+    # Example placeholder:
+    if isinstance(text, list):
+        return np.random.rand(len(text), 384)  # Replace with your logic
+    else:
+        return np.random.rand(384)  # Replace with your logic
 
-# Example issue_summary format:
+# Define your issue summary
 issue_summary = {
     "Network Issue": {
-        "description": "Problems related to network connectivity, internet outages, VPN failures, router issues, and infrastructure problems",
-        "keywords": ["network", "connectivity", "internet", "VPN", "router", "infrastructure"]
+        "description": "Problems related to network connectivity, internet outages, VPN failures",
+        "keywords": ["network", "connectivity", "internet", "VPN"]
     },
-    "Security Breach": "Security incidents involving unauthorized access, malware, phishing attacks, and data breaches",
+    "Security Breach": "Security incidents involving unauthorized access, malware, phishing attacks",
     "Hardware Failure": {
-        "description": "Physical hardware problems including server failures, disk crashes, and component malfunctions",
-        "keywords": ["hardware", "server", "disk", "physical", "component"]
+        "description": "Physical hardware problems including server failures, disk crashes",
+        "keywords": ["hardware", "server", "disk", "physical"]
     },
     # ... more classes
 }
@@ -959,8 +1038,9 @@ issue_summary = {
 results = train_incident_classifier(
     df=your_dataframe, 
     issue_summary=your_issue_summary,
-    text_column='combined',  # or whatever your text column is named
-    class_column='class',    # or whatever your class column is named
+    get_embedding_func=get_embedding,  # Your function
+    text_column='combined',
+    class_column='class',
     num_epochs=30,
     batch_size=32
 )
@@ -968,10 +1048,12 @@ results = train_incident_classifier(
 # Use for prediction
 predictions = predict_incident_class(
     model_path=results['model_save_path'],
-    text="Server experiencing hardware malfunction causing service outage"
+    text="Server experiencing hardware malfunction causing service outage",
+    get_embedding_func=get_embedding
 )
 """
 
 if __name__ == "__main__":
     print("Incident Classification System Ready!")
-    print("Please provide your dataframe (df) and issue_summary dictionary to use train_incident_classifier()")
+    print("Please provide your dataframe (df), issue_summary dictionary, and get_embedding function")
+    print("to use train_incident_classifier()")
