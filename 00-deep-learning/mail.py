@@ -1,1059 +1,1010 @@
-"""
-Incident Classification System using Custom Embedding Function + PyTorch with Existing Data
-==========================================================================================
+# Comprehensive Error Analysis for 8-Class Neural Network Classification Model
+# This notebook provides detailed error analysis with beautiful visualizations
 
-This implementation uses your existing get_embedding function to create text embeddings,
-then feeds those embeddings along with class description context into PyTorch neural networks.
-
-Requirements:
-- df: DataFrame with incident data (should have 'combined' column and class labels)
-- issue_summary: Dictionary with class names and their descriptions
-- get_embedding: Your existing embedding function
-
-Usage:
-    results = train_incident_classifier(df, issue_summary, get_embedding)
-"""
-
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-from torch.utils.data import Dataset, DataLoader
 import pandas as pd
 import numpy as np
-import random
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
-from sklearn.metrics.pairwise import cosine_similarity
-from sklearn.preprocessing import LabelEncoder
 import matplotlib.pyplot as plt
 import seaborn as sns
-from tqdm import tqdm
+from sklearn.metrics import (confusion_matrix, classification_report, 
+                            precision_recall_curve, roc_curve, auc,
+                            precision_score, recall_score, f1_score,
+                            matthews_corrcoef, cohen_kappa_score)
+from sklearn.preprocessing import label_binarize
 import warnings
 warnings.filterwarnings('ignore')
 
-# Set random seeds for reproducibility
-def set_seed(seed=42):
-    random.seed(seed)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed)
+# Set style for beautiful plots
+plt.style.use('seaborn-v0_8')
+sns.set_palette("husl")
+plt.rcParams['figure.figsize'] = (12, 8)
+plt.rcParams['font.size'] = 12
 
-set_seed(42)
+# Load your data
+# Replace 'your_file.csv' with your actual file path
+# df = pd.read_csv('your_file.csv')
 
-# =====================================================
-# 1. DATA PREPROCESSING AND CLASS HANDLING
-# =====================================================
+# For demonstration, creating sample data structure
+# Replace this section with your actual data loading
+np.random.seed(42)
+n_samples = 1000
 
-class DataPreprocessor:
-    def __init__(self, df, issue_summary, text_column='combined', class_column='class'):
-        """
-        Initialize with existing data
-        
-        Args:
-            df: DataFrame with incident data
-            issue_summary: Dictionary with class definitions
-                Format: {class_name: {"description": "...", "keywords": [...], ...}}
-                OR: {class_name: "description_string"}
-            text_column: Column name containing the text to classify
-            class_column: Column name containing the class labels
-        """
-        self.df = df.copy()
-        self.text_column = text_column
-        self.class_column = class_column
-        self.issue_summary = issue_summary
-        
-        # Process issue_summary to standardize format
-        self.class_definitions = self._standardize_issue_summary()
-        self.classes = list(self.class_definitions.keys())
-        
-        # Create label encoders
-        self.label_encoder = LabelEncoder()
-        self._prepare_data()
-        
-    def _standardize_issue_summary(self):
-        """Standardize issue_summary format"""
-        standardized = {}
-        
-        for class_name, class_info in self.issue_summary.items():
-            if isinstance(class_info, str):
-                # Simple string description
-                standardized[class_name] = {
-                    "description": class_info,
-                    "keywords": self._extract_keywords_from_description(class_info)
-                }
-            elif isinstance(class_info, dict):
-                # Dictionary with description and possibly other fields
-                description = class_info.get("description", class_info.get("desc", ""))
-                keywords = class_info.get("keywords", class_info.get("tags", []))
-                
-                if not keywords:
-                    keywords = self._extract_keywords_from_description(description)
-                
-                standardized[class_name] = {
-                    "description": description,
-                    "keywords": keywords
-                }
-            else:
-                raise ValueError(f"Unsupported format for class {class_name}: {type(class_info)}")
-        
-        return standardized
-    
-    def _extract_keywords_from_description(self, description):
-        """Extract basic keywords from description"""
-        import re
-        # Simple keyword extraction
-        words = re.findall(r'\b\w+\b', description.lower())
-        # Filter out common stop words and keep meaningful terms
-        stop_words = {'the', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'a', 'an', 'is', 'are', 'was', 'were', 'be', 'been', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should', 'may', 'might', 'can', 'that', 'this', 'these', 'those'}
-        keywords = [word for word in words if len(word) > 3 and word not in stop_words]
-        return list(set(keywords))  # Remove duplicates
-    
-    def _prepare_data(self):
-        """Prepare data for training"""
-        # Check if required columns exist
-        if self.text_column not in self.df.columns:
-            raise ValueError(f"Text column '{self.text_column}' not found in dataframe")
-        
-        if self.class_column not in self.df.columns:
-            raise ValueError(f"Class column '{self.class_column}' not found in dataframe")
-        
-        # Remove rows with missing data
-        self.df = self.df.dropna(subset=[self.text_column, self.class_column])
-        
-        # Filter classes to only include those in issue_summary
-        self.df = self.df[self.df[self.class_column].isin(self.classes)]
-        
-        # Encode labels
-        self.df['class_idx'] = self.label_encoder.fit_transform(self.df[self.class_column])
-        
-        # Create mappings
-        self.class_to_idx = {cls: idx for idx, cls in enumerate(self.label_encoder.classes_)}
-        self.idx_to_class = {idx: cls for cls, idx in self.class_to_idx.items()}
-        
-        print(f"Data prepared: {len(self.df)} samples across {len(self.classes)} classes")
-        print("Class distribution:")
-        print(self.df[self.class_column].value_counts())
-    
-    def get_class_descriptions(self):
-        """Get list of class descriptions in label encoder order"""
-        return [self.class_definitions[cls]["description"] for cls in self.label_encoder.classes_]
-    
-    def get_class_info(self, class_name):
-        """Get information for a specific class"""
-        return self.class_definitions.get(class_name, {})
+# Define class names based on your data
+class_names = ['access_issue', 'courier', 'hardware', 'manufacturer', 
+               'software', 'telecom', 'user_guidance', 'other']
 
-# =====================================================
-# 2. EMBEDDING GENERATION WITH CUSTOM FUNCTION
-# =====================================================
-
-class CustomEmbeddingGenerator:
-    def __init__(self, get_embedding_func):
-        """
-        Initialize embedding generator with your custom embedding function
-        
-        Args:
-            get_embedding_func: Your existing embedding function
-                Should accept text (string or list of strings) and return embeddings
-        """
-        self.get_embedding = get_embedding_func
-        
-        # Test the function to get embedding dimension
-        print("Testing embedding function...")
-        test_embedding = self._get_single_embedding("test")
-        self.embedding_dim = len(test_embedding) if hasattr(test_embedding, '__len__') else test_embedding.shape[-1]
-        print(f"Embedding dimension: {self.embedding_dim}")
-        
-        self.class_embeddings = None
-        self.class_descriptions = None
-    
-    def _get_single_embedding(self, text):
-        """Get embedding for a single text"""
-        try:
-            # Try calling the function with single text
-            embedding = self.get_embedding(text)
-            
-            # Convert to numpy if needed
-            if hasattr(embedding, 'numpy'):
-                embedding = embedding.numpy()
-            elif not isinstance(embedding, np.ndarray):
-                embedding = np.array(embedding)
-            
-            # Ensure 1D
-            if embedding.ndim > 1:
-                embedding = embedding.flatten()
-                
-            return embedding
-            
-        except Exception as e:
-            print(f"Error with embedding function: {e}")
-            print(f"Input type: {type(text)}")
-            print(f"Input: {text}")
-            raise
-    
-    def _get_batch_embeddings(self, texts):
-        """Get embeddings for a batch of texts"""
-        try:
-            # Try batch processing first
-            embeddings = self.get_embedding(texts)
-            
-            # Convert to numpy if needed
-            if hasattr(embeddings, 'numpy'):
-                embeddings = embeddings.numpy()
-            elif not isinstance(embeddings, np.ndarray):
-                embeddings = np.array(embeddings)
-            
-            # Ensure correct shape
-            if embeddings.ndim == 1:
-                # Single embedding returned, reshape
-                embeddings = embeddings.reshape(1, -1)
-            
-            return embeddings
-            
-        except Exception as e:
-            print(f"Batch processing failed: {e}")
-            print("Falling back to individual processing...")
-            
-            # Fall back to individual processing
-            embeddings = []
-            for text in texts:
-                emb = self._get_single_embedding(text)
-                embeddings.append(emb)
-            
-            return np.array(embeddings)
-    
-    def generate_class_embeddings(self, class_descriptions):
-        """Generate embeddings for class descriptions"""
-        print("Generating class description embeddings...")
-        self.class_descriptions = class_descriptions
-        
-        self.class_embeddings = self._get_batch_embeddings(class_descriptions)
-        
-        print(f"Class embeddings shape: {self.class_embeddings.shape}")
-        return self.class_embeddings
-    
-    def generate_text_embeddings(self, texts, batch_size=32):
-        """Generate embeddings for incident texts"""
-        print(f"Generating text embeddings for {len(texts)} texts...")
-        
-        if len(texts) <= batch_size:
-            # Process all at once
-            embeddings = self._get_batch_embeddings(texts)
-        else:
-            # Process in batches
-            embeddings = []
-            
-            with tqdm(range(0, len(texts), batch_size), desc="Generating embeddings") as pbar:
-                for i in pbar:
-                    batch_texts = texts[i:i + batch_size]
-                    batch_embeddings = self._get_batch_embeddings(batch_texts)
-                    embeddings.append(batch_embeddings)
-            
-            embeddings = np.vstack(embeddings)
-        
-        print(f"Text embeddings shape: {embeddings.shape}")
-        return embeddings
-    
-    def compute_class_similarities(self, text_embeddings):
-        """Compute similarity scores between text and class descriptions"""
-        if self.class_embeddings is None:
-            raise ValueError("Class embeddings not generated. Call generate_class_embeddings first.")
-        
-        print("Computing class similarity features...")
-        similarities = cosine_similarity(text_embeddings, self.class_embeddings)
-        return similarities
-    
-    def create_enhanced_features(self, text_embeddings, include_similarities=True):
-        """Create enhanced features combining text embeddings and class similarities"""
-        features = [text_embeddings]
-        
-        if include_similarities and self.class_embeddings is not None:
-            similarities = self.compute_class_similarities(text_embeddings)
-            features.append(similarities)
-            
-            # Add normalized similarities
-            similarity_norms = np.linalg.norm(similarities, axis=1, keepdims=True)
-            similarity_norms = np.where(similarity_norms == 0, 1, similarity_norms)  # Avoid division by zero
-            normalized_similarities = similarities / similarity_norms
-            features.append(normalized_similarities)
-            
-            # Add max similarity scores
-            max_similarities = np.max(similarities, axis=1, keepdims=True)
-            features.append(max_similarities)
-            
-            # Add similarity statistics
-            mean_similarities = np.mean(similarities, axis=1, keepdims=True)
-            std_similarities = np.std(similarities, axis=1, keepdims=True)
-            features.extend([mean_similarities, std_similarities])
-        
-        enhanced_features = np.concatenate(features, axis=1)
-        print(f"Enhanced features shape: {enhanced_features.shape}")
-        return enhanced_features
-
-# =====================================================
-# 3. PYTORCH DATASET
-# =====================================================
-
-class EnhancedEmbeddingDataset(Dataset):
-    def __init__(self, embeddings, labels, class_similarities=None):
-        self.embeddings = torch.FloatTensor(embeddings)
-        self.labels = torch.LongTensor(labels)
-        
-        if class_similarities is not None:
-            self.class_similarities = torch.FloatTensor(class_similarities)
-        else:
-            self.class_similarities = None
-    
-    def __len__(self):
-        return len(self.embeddings)
-    
-    def __getitem__(self, idx):
-        if self.class_similarities is not None:
-            return self.embeddings[idx], self.labels[idx], self.class_similarities[idx]
-        else:
-            return self.embeddings[idx], self.labels[idx]
-
-# =====================================================
-# 4. NEURAL NETWORK MODELS
-# =====================================================
-
-class ClassAwareMLPClassifier(nn.Module):
-    """MLP with class description awareness"""
-    def __init__(self, input_dim, num_classes, hidden_dims=[512, 256, 128], dropout=0.3):
-        super(ClassAwareMLPClassifier, self).__init__()
-        
-        self.num_classes = num_classes
-        
-        # Main feature processing
-        layers = []
-        prev_dim = input_dim
-        
-        for hidden_dim in hidden_dims:
-            layers.extend([
-                nn.Linear(prev_dim, hidden_dim),
-                nn.ReLU(),
-                nn.Dropout(dropout),
-                nn.BatchNorm1d(hidden_dim)
-            ])
-            prev_dim = hidden_dim
-        
-        self.feature_extractor = nn.Sequential(*layers)
-        
-        # Class-aware attention mechanism
-        self.class_attention = nn.MultiheadAttention(
-            embed_dim=prev_dim,
-            num_heads=8,
-            dropout=dropout,
-            batch_first=True
-        )
-        
-        # Final classifier
-        self.classifier = nn.Sequential(
-            nn.Dropout(dropout),
-            nn.Linear(prev_dim, num_classes)
-        )
-    
-    def forward(self, x, class_similarities=None):
-        # Extract features
-        features = self.feature_extractor(x)
-        
-        # Add batch and sequence dimensions for attention
-        features_expanded = features.unsqueeze(1)
-        
-        # Self-attention
-        attended_features, _ = self.class_attention(
-            features_expanded, features_expanded, features_expanded
-        )
-        
-        # Remove sequence dimension
-        attended_features = attended_features.squeeze(1)
-        
-        # If class similarities are provided, incorporate them
-        if class_similarities is not None:
-            similarity_weights = F.softmax(class_similarities, dim=1)
-            attended_features = attended_features + 0.1 * torch.sum(
-                similarity_weights.unsqueeze(1) * class_similarities.unsqueeze(1), dim=2
-            )
-        
-        # Final classification
-        output = self.classifier(attended_features)
-        return output
-
-class ClassAwareLSTMClassifier(nn.Module):
-    """LSTM with class description awareness"""
-    def __init__(self, input_dim, hidden_dim, num_layers, num_classes, dropout=0.3):
-        super(ClassAwareLSTMClassifier, self).__init__()
-        
-        # Determine sequence length based on input dimension
-        self.seq_len = max(8, min(16, input_dim // 32))
-        self.feature_dim = max(8, input_dim // self.seq_len)
-        
-        # Input processing
-        self.input_projection = nn.Linear(input_dim, self.seq_len * self.feature_dim)
-        self.feature_projection = nn.Linear(self.feature_dim, hidden_dim)
-        
-        # LSTM layers
-        self.lstm = nn.LSTM(
-            hidden_dim, 
-            hidden_dim, 
-            num_layers, 
-            batch_first=True, 
-            dropout=dropout if num_layers > 1 else 0,
-            bidirectional=True
-        )
-        
-        # Attention mechanism
-        self.attention = nn.MultiheadAttention(
-            hidden_dim * 2, 
-            num_heads=8, 
-            dropout=dropout,
-            batch_first=True
-        )
-        
-        # Class similarity integration
-        self.class_integration = nn.Linear(num_classes, hidden_dim * 2)
-        
-        # Final classifier
-        self.classifier = nn.Sequential(
-            nn.Dropout(dropout),
-            nn.Linear(hidden_dim * 2, hidden_dim),
-            nn.ReLU(),
-            nn.Dropout(dropout),
-            nn.Linear(hidden_dim, num_classes)
-        )
-    
-    def forward(self, x, class_similarities=None):
-        batch_size = x.size(0)
-        
-        # Project to desired sequence length
-        x = self.input_projection(x)
-        x = x.view(batch_size, self.seq_len, self.feature_dim)
-        
-        # Project features to hidden dimension
-        x = self.feature_projection(x)
-        
-        # LSTM processing
-        lstm_out, _ = self.lstm(x)
-        
-        # Self-attention
-        attn_out, _ = self.attention(lstm_out, lstm_out, lstm_out)
-        
-        # Global average pooling
-        pooled = torch.mean(attn_out, dim=1)
-        
-        # Integrate class similarities if provided
-        if class_similarities is not None:
-            class_features = self.class_integration(class_similarities)
-            pooled = pooled + 0.2 * class_features
-        
-        # Classification
-        output = self.classifier(pooled)
-        return output
-
-class ClassAwareCNNClassifier(nn.Module):
-    """CNN with class description awareness"""
-    def __init__(self, input_dim, num_classes, dropout=0.3):
-        super(ClassAwareCNNClassifier, self).__init__()
-        
-        self.num_classes = num_classes
-        
-        # Calculate appropriate 2D dimensions
-        self.height = int(np.sqrt(input_dim))
-        self.width = input_dim // self.height
-        
-        # Adjust if not perfect fit
-        target_size = self.height * self.width
-        if target_size != input_dim:
-            self.input_projection = nn.Linear(input_dim, target_size)
-        else:
-            self.input_projection = None
-        
-        # Convolutional layers
-        self.conv_layers = nn.Sequential(
-            nn.Conv2d(1, 32, kernel_size=3, padding=1),
-            nn.ReLU(),
-            nn.BatchNorm2d(32),
-            nn.MaxPool2d(2),
-            nn.Dropout2d(dropout),
-            
-            nn.Conv2d(32, 64, kernel_size=3, padding=1),
-            nn.ReLU(),
-            nn.BatchNorm2d(64),
-            nn.MaxPool2d(2),
-            nn.Dropout2d(dropout),
-            
-            nn.Conv2d(64, 128, kernel_size=3, padding=1),
-            nn.ReLU(),
-            nn.BatchNorm2d(128),
-            nn.AdaptiveAvgPool2d((4, 4))
-        )
-        
-        # Class similarity integration
-        self.class_integration = nn.Linear(num_classes, 128)
-        
-        # Classifier
-        conv_output_size = 128 * 4 * 4
-        self.classifier = nn.Sequential(
-            nn.Dropout(dropout),
-            nn.Linear(conv_output_size + 128, 256),
-            nn.ReLU(),
-            nn.Dropout(dropout),
-            nn.Linear(256, 128),
-            nn.ReLU(),
-            nn.Dropout(dropout),
-            nn.Linear(128, num_classes)
-        )
-    
-    def forward(self, x, class_similarities=None):
-        batch_size = x.size(0)
-        
-        # Project if needed
-        if self.input_projection:
-            x = self.input_projection(x)
-        
-        # Reshape to 2D
-        x = x.view(batch_size, 1, self.height, self.width)
-        
-        # Apply convolutions
-        conv_features = self.conv_layers(x)
-        conv_features = conv_features.view(batch_size, -1)
-        
-        # Integrate class similarities
-        if class_similarities is not None:
-            class_features = self.class_integration(class_similarities)
-            combined_features = torch.cat([conv_features, class_features], dim=1)
-        else:
-            zero_class_features = torch.zeros(batch_size, 128, device=conv_features.device)
-            combined_features = torch.cat([conv_features, zero_class_features], dim=1)
-        
-        # Classification
-        output = self.classifier(combined_features)
-        return output
-
-# =====================================================
-# 5. TRAINING AND EVALUATION
-# =====================================================
-
-class ModelTrainer:
-    def __init__(self, model, device='cuda' if torch.cuda.is_available() else 'cpu'):
-        self.model = model.to(device)
-        self.device = device
-        self.train_losses = []
-        self.val_accuracies = []
-    
-    def train_model(self, train_loader, val_loader, num_epochs=50, lr=0.001):
-        criterion = nn.CrossEntropyLoss()
-        optimizer = torch.optim.AdamW(self.model.parameters(), lr=lr, weight_decay=0.01)
-        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-            optimizer, mode='max', factor=0.5, patience=5, verbose=True
-        )
-        
-        best_val_acc = 0.0
-        best_model_state = None
-        
-        print(f"Training on {self.device}")
-        print(f"Model: {self.model.__class__.__name__}")
-        
-        for epoch in range(num_epochs):
-            # Training phase
-            self.model.train()
-            train_loss = 0.0
-            train_correct = 0
-            train_total = 0
-            
-            with tqdm(train_loader, desc=f'Epoch {epoch+1}/{num_epochs}') as pbar:
-                for batch in pbar:
-                    if len(batch) == 3:  # With class similarities
-                        embeddings, labels, class_similarities = batch
-                        embeddings = embeddings.to(self.device)
-                        labels = labels.to(self.device) 
-                        class_similarities = class_similarities.to(self.device)
-                        
-                        optimizer.zero_grad()
-                        outputs = self.model(embeddings, class_similarities)
-                    else:  # Without class similarities
-                        embeddings, labels = batch
-                        embeddings, labels = embeddings.to(self.device), labels.to(self.device)
-                        
-                        optimizer.zero_grad()
-                        outputs = self.model(embeddings)
-                    
-                    loss = criterion(outputs, labels)
-                    loss.backward()
-                    
-                    # Gradient clipping for stability
-                    torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
-                    
-                    optimizer.step()
-                    
-                    train_loss += loss.item()
-                    _, predicted = torch.max(outputs.data, 1)
-                    train_total += labels.size(0)
-                    train_correct += (predicted == labels).sum().item()
-                    
-                    pbar.set_postfix({
-                        'Loss': f'{loss.item():.4f}',
-                        'Acc': f'{100 * train_correct / train_total:.2f}%'
-                    })
-            
-            # Validation phase
-            val_acc = self.evaluate_model(val_loader)
-            
-            self.train_losses.append(train_loss / len(train_loader))
-            self.val_accuracies.append(val_acc)
-            
-            # Learning rate scheduling
-            scheduler.step(val_acc)
-            
-            # Save best model
-            if val_acc > best_val_acc:
-                best_val_acc = val_acc
-                best_model_state = self.model.state_dict().copy()
-            
-            print(f'Epoch [{epoch+1}/{num_epochs}], '
-                  f'Train Acc: {100 * train_correct / train_total:.2f}%, '
-                  f'Val Acc: {val_acc:.2f}%, '
-                  f'Best Val Acc: {best_val_acc:.2f}%')
-        
-        # Load best model
-        if best_model_state:
-            self.model.load_state_dict(best_model_state)
-        
-        return best_val_acc
-    
-    def evaluate_model(self, data_loader):
-        self.model.eval()
-        correct = 0
-        total = 0
-        
-        with torch.no_grad():
-            for batch in data_loader:
-                if len(batch) == 3:  # With class similarities
-                    embeddings, labels, class_similarities = batch
-                    embeddings = embeddings.to(self.device)
-                    labels = labels.to(self.device)
-                    class_similarities = class_similarities.to(self.device)
-                    outputs = self.model(embeddings, class_similarities)
-                else:  # Without class similarities
-                    embeddings, labels = batch
-                    embeddings, labels = embeddings.to(self.device), labels.to(self.device)
-                    outputs = self.model(embeddings)
-                
-                _, predicted = torch.max(outputs.data, 1)
-                total += labels.size(0)
-                correct += (predicted == labels).sum().item()
-        
-        accuracy = 100 * correct / total
-        return accuracy
-    
-    def get_predictions(self, data_loader):
-        self.model.eval()
-        all_predictions = []
-        all_labels = []
-        all_probabilities = []
-        
-        with torch.no_grad():
-            for batch in data_loader:
-                if len(batch) == 3:  # With class similarities
-                    embeddings, labels, class_similarities = batch
-                    embeddings = embeddings.to(self.device)
-                    labels = labels.to(self.device)
-                    class_similarities = class_similarities.to(self.device)
-                    outputs = self.model(embeddings, class_similarities)
-                else:  # Without class similarities
-                    embeddings, labels = batch
-                    embeddings, labels = embeddings.to(self.device), labels.to(self.device)
-                    outputs = self.model(embeddings)
-                
-                probabilities = F.softmax(outputs, dim=1)
-                _, predicted = torch.max(outputs.data, 1)
-                
-                all_predictions.extend(predicted.cpu().numpy())
-                all_labels.extend(labels.cpu().numpy())
-                all_probabilities.extend(probabilities.cpu().numpy())
-        
-        return np.array(all_predictions), np.array(all_labels), np.array(all_probabilities)
-
-# =====================================================
-# 6. VISUALIZATION AND ANALYSIS
-# =====================================================
-
-def plot_class_similarities(text_embeddings, class_embeddings, class_names, sample_size=100):
-    """Plot similarity heatmap between sample texts and class descriptions"""
-    sample_indices = np.random.choice(len(text_embeddings), min(sample_size, len(text_embeddings)), replace=False)
-    sample_embeddings = text_embeddings[sample_indices]
-    
-    similarities = cosine_similarity(sample_embeddings, class_embeddings)
-    
-    plt.figure(figsize=(12, 8))
-    sns.heatmap(similarities, 
-                xticklabels=class_names,
-                yticklabels=[f'Text {i}' for i in range(len(sample_embeddings))],
-                cmap='YlOrRd', 
-                center=0)
-    plt.title('Text-to-Class Description Similarities')
-    plt.xlabel('Class Descriptions')
-    plt.ylabel('Sample Texts')
-    plt.xticks(rotation=45, ha='right')
-    plt.tight_layout()
-    plt.show()
-
-def plot_training_history(trainer, model_name):
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 5))
-    
-    ax1.plot(trainer.train_losses)
-    ax1.set_title(f'{model_name} - Training Loss')
-    ax1.set_xlabel('Epoch')
-    ax1.set_ylabel('Loss')
-    ax1.grid(True)
-    
-    ax2.plot(trainer.val_accuracies)
-    ax2.set_title(f'{model_name} - Validation Accuracy')
-    ax2.set_xlabel('Epoch')
-    ax2.set_ylabel('Accuracy (%)')
-    ax2.grid(True)
-    
-    plt.tight_layout()
-    plt.show()
-
-def plot_confusion_matrix(y_true, y_pred, class_names, model_name):
-    cm = confusion_matrix(y_true, y_pred)
-    
-    plt.figure(figsize=(12, 10))
-    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', 
-                xticklabels=class_names, yticklabels=class_names)
-    plt.title(f'{model_name} - Confusion Matrix')
-    plt.xlabel('Predicted')
-    plt.ylabel('Actual')
-    plt.xticks(rotation=45, ha='right')
-    plt.yticks(rotation=0)
-    plt.tight_layout()
-    plt.show()
-
-def analyze_predictions(y_true, y_pred, y_prob, class_names, model_name):
-    print(f"\n{model_name} - Detailed Results:")
-    print("=" * 50)
-    
-    accuracy = accuracy_score(y_true, y_pred)
-    print(f"Overall Accuracy: {accuracy:.4f}")
-    
-    print("\nClassification Report:")
-    print(classification_report(y_true, y_pred, target_names=class_names))
-
-def analyze_class_awareness(predictions, true_labels, class_similarities, class_names):
-    """Analyze how class similarities correlate with predictions"""
-    correct_mask = predictions == true_labels
-    
-    print("\nClass Awareness Analysis:")
-    print("=" * 50)
-    
-    for i, class_name in enumerate(class_names):
-        class_mask = true_labels == i
-        if np.sum(class_mask) == 0:
-            continue
-            
-        avg_similarity = np.mean(class_similarities[class_mask, i])
-        class_accuracy = np.mean(correct_mask[class_mask])
-        
-        print(f"{class_name}:")
-        print(f"  Average similarity to description: {avg_similarity:.4f}")
-        print(f"  Classification accuracy: {class_accuracy:.4f}")
-        print()
-
-# =====================================================
-# 7. MAIN TRAINING FUNCTION
-# =====================================================
-
-def train_incident_classifier(df, issue_summary, get_embedding_func, text_column='combined', 
-                             class_column='class', test_size=0.2, val_size=0.2,
-                             batch_size=32, num_epochs=30, lr=0.001):
-    """
-    Main function to train incident classifier with existing data and custom embedding function
-    
-    Args:
-        df: DataFrame with incident data
-        issue_summary: Dictionary with class definitions
-        get_embedding_func: Your existing embedding function
-        text_column: Column name containing text to classify
-        class_column: Column name containing class labels
-        test_size: Proportion of data for testing
-        val_size: Proportion of training data for validation
-        batch_size: Batch size for training
-        num_epochs: Number of training epochs
-        lr: Learning rate
-    
-    Returns:
-        Dictionary with results including trained models and metrics
-    """
-    
-    print("Class-Aware Incident Classification with Custom Embedding Function")
-    print("=" * 70)
-    
-    # 1. Preprocess data
-    print("\n1. Preprocessing data...")
-    preprocessor = DataPreprocessor(df, issue_summary, text_column, class_column)
-    
-    # Display class information
-    print("\nClass Definitions:")
-    for i, class_name in enumerate(preprocessor.classes):
-        class_info = preprocessor.get_class_info(class_name)
-        description = class_info.get("description", "No description")
-        print(f"{i+1}. {class_name}:")
-        print(f"   Description: {description[:100]}...")
-        if "keywords" in class_info:
-            print(f"   Keywords: {', '.join(class_info['keywords'][:5])}...")
-        print()
-    
-    # 2. Generate embeddings using your function
-    print("2. Generating embeddings using custom function...")
-    embedding_generator = CustomEmbeddingGenerator(get_embedding_func)
-    
-    # Generate class description embeddings
-    class_descriptions = preprocessor.get_class_descriptions()
-    class_embeddings = embedding_generator.generate_class_embeddings(class_descriptions)
-    
-    # Generate text embeddings
-    texts = preprocessor.df[text_column].tolist()
-    text_embeddings = embedding_generator.generate_text_embeddings(texts)
-    
-    # Create enhanced features
-    enhanced_features = embedding_generator.create_enhanced_features(text_embeddings)
-    
-    print(f"Text embeddings shape: {text_embeddings.shape}")
-    print(f"Class embeddings shape: {class_embeddings.shape}")
-    print(f"Enhanced features shape: {enhanced_features.shape}")
-    
-    # 3. Prepare data for training
-    print("\n3. Preparing data for training...")
-    
-    class_similarities = embedding_generator.compute_class_similarities(text_embeddings)
-    labels = preprocessor.df['class_idx'].values
-    
-    # Split data
-    X_train, X_test, y_train, y_test, sim_train, sim_test = train_test_split(
-        enhanced_features, labels, class_similarities,
-        test_size=test_size, 
-        random_state=42, 
-        stratify=labels
-    )
-    
-    X_train, X_val, y_train, y_val, sim_train, sim_val = train_test_split(
-        X_train, y_train, sim_train,
-        test_size=val_size, 
-        random_state=42, 
-        stratify=y_train
-    )
-    
-    print(f"Train: {X_train.shape[0]}, Val: {X_val.shape[0]}, Test: {X_test.shape[0]}")
-    
-    # Create datasets
-    train_dataset = EnhancedEmbeddingDataset(X_train, y_train, sim_train)
-    val_dataset = EnhancedEmbeddingDataset(X_val, y_val, sim_val)
-    test_dataset = EnhancedEmbeddingDataset(X_test, y_test, sim_test)
-    
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
-    
-    # 4. Train models
-    print("\n4. Training models...")
-    
-    input_dim = enhanced_features.shape[1]
-    num_classes = len(preprocessor.classes)
-    
-    models_to_train = {
-        'ClassAware-MLP': ClassAwareMLPClassifier(input_dim, num_classes),
-        'ClassAware-LSTM': ClassAwareLSTMClassifier(input_dim, 128, 2, num_classes),
-        'ClassAware-CNN': ClassAwareCNNClassifier(input_dim, num_classes)
-    }
-    
-    results = {}
-    
-    for model_name, model in models_to_train.items():
-        print(f"\nTraining {model_name}...")
-        trainer = ModelTrainer(model)
-        
-        # Train model
-        best_val_acc = trainer.train_model(
-            train_loader, val_loader, 
-            num_epochs=num_epochs, lr=lr
-        )
-        
-        # Evaluate on test set
-        test_acc = trainer.evaluate_model(test_loader)
-        y_pred, y_true, y_prob = trainer.get_predictions(test_loader)
-        
-        results[model_name] = {
-            'trainer': trainer,
-            'test_accuracy': test_acc,
-            'predictions': (y_pred, y_true, y_prob),
-            'best_val_accuracy': best_val_acc
-        }
-        
-        print(f"{model_name} Test Accuracy: {test_acc:.2f}%")
-    
-    # 5. Analysis and comparison
-    print("\n5. Model Comparison:")
-    print("=" * 40)
-    for model_name, result in results.items():
-        print(f"{model_name}: {result['test_accuracy']:.2f}%")
-    
-    # Find best model
-    best_model_name = max(results.keys(), key=lambda k: results[k]['test_accuracy'])
-    print(f"\nBest Model: {best_model_name}")
-    
-    # 6. Detailed analysis of best model
-    print(f"\n6. Detailed analysis of {best_model_name}:")
-    best_result = results[best_model_name]
-    y_pred, y_true, y_prob = best_result['predictions']
-    
-    analyze_predictions(y_true, y_pred, y_prob, preprocessor.classes, best_model_name)
-    analyze_class_awareness(y_pred, y_true, sim_test, preprocessor.classes)
-    
-    # 7. Visualizations
-    print("\n7. Generating visualizations...")
-    
-    plot_class_similarities(text_embeddings, class_embeddings, preprocessor.classes)
-    plot_training_history(best_result['trainer'], best_model_name)
-    plot_confusion_matrix(y_true, y_pred, preprocessor.classes, best_model_name)
-    
-    # 8. Save best model
-    print(f"\n8. Saving best model ({best_model_name})...")
-    model_save_path = f'best_incident_classifier_{best_model_name.replace("-", "_").lower()}.pth'
-    
-    torch.save({
-        'model_state_dict': best_result['trainer'].model.state_dict(),
-        'model_class': best_result['trainer'].model.__class__.__name__,
-        'preprocessor': preprocessor,
-        'embedding_generator': embedding_generator,
-        'class_embeddings': class_embeddings,
-        'classes': preprocessor.classes,
-        'class_definitions': preprocessor.class_definitions,
-        'input_dim': input_dim,
-        'num_classes': num_classes,
-        'label_encoder': preprocessor.label_encoder
-    }, model_save_path)
-    
-    print(f"Model saved to: {model_save_path}")
-    print("Training completed!")
-    
-    return {
-        'results': results,
-        'best_model': best_model_name,
-        'preprocessor': preprocessor,
-        'embedding_generator': embedding_generator,
-        'model_save_path': model_save_path
-    }
-
-# =====================================================
-# 8. INFERENCE FUNCTION
-# =====================================================
-
-def predict_incident_class(model_path, text, get_embedding_func, top_k=3):
-    """
-    Predict incident class for new text using trained model
-    
-    Args:
-        model_path: Path to saved model
-        text: Text to classify
-        get_embedding_func: Your embedding function
-        top_k: Number of top predictions to return
-    
-    Returns:
-        Dictionary with predictions and confidences
-    """
-    
-    # Load model and components
-    checkpoint = torch.load(model_path, map_location='cpu')
-    
-    # Get components
-    preprocessor = checkpoint['preprocessor']
-    classes = checkpoint['classes']
-    class_embeddings = checkpoint['class_embeddings']
-    
-    # Create new embedding generator with your function
-    embedding_generator = CustomEmbeddingGenerator(get_embedding_func)
-    embedding_generator.class_embeddings = class_embeddings
-    embedding_generator.class_descriptions = preprocessor.get_class_descriptions()
-    
-    # Generate embedding for new text
-    text_embedding = embedding_generator.generate_text_embeddings([text])
-    enhanced_features = embedding_generator.create_enhanced_features(text_embedding)
-    class_similarities = embedding_generator.compute_class_similarities(text_embedding)
-    
-    print(f"Text: {text}")
-    print(f"\nClass Similarities:")
-    for i, class_name in enumerate(classes):
-        similarity = class_similarities[0, i]
-        print(f"  {class_name}: {similarity:.4f}")
-    
-    # Get top similarities as proxy for predictions
-    top_indices = np.argsort(class_similarities[0])[-top_k:][::-1]
-    
-    predictions = []
-    for idx in top_indices:
-        predictions.append({
-            'class': classes[idx],
-            'confidence': float(class_similarities[0, idx]),
-            'description': preprocessor.class_definitions[classes[idx]]['description']
-        })
-    
-    return {
-        'predictions': predictions,
-        'enhanced_features_shape': enhanced_features.shape,
-        'text_processed': True
-    }
-
-# =====================================================
-# 9. EXAMPLE USAGE
-# =====================================================
-
-"""
-Example usage:
-
-# Define your embedding function (example)
-def get_embedding(text):
-    # Your existing embedding logic here
-    # Should return numpy array or similar
-    # Example placeholder:
-    if isinstance(text, list):
-        return np.random.rand(len(text), 384)  # Replace with your logic
-    else:
-        return np.random.rand(384)  # Replace with your logic
-
-# Define your issue summary
-issue_summary = {
-    "Network Issue": {
-        "description": "Problems related to network connectivity, internet outages, VPN failures",
-        "keywords": ["network", "connectivity", "internet", "VPN"]
-    },
-    "Security Breach": "Security incidents involving unauthorized access, malware, phishing attacks",
-    "Hardware Failure": {
-        "description": "Physical hardware problems including server failures, disk crashes",
-        "keywords": ["hardware", "server", "disk", "physical"]
-    },
-    # ... more classes
+# Sample data creation (replace with your actual data)
+sample_data = {
+    'INC_Number': [f'INC{i:06d}' for i in range(n_samples)],
+    'Real_Label': np.random.choice(class_names, n_samples),
+    'Predicted_Label': np.random.choice(class_names, n_samples),
 }
 
-# Train the classifier
-results = train_incident_classifier(
-    df=your_dataframe, 
-    issue_summary=your_issue_summary,
-    get_embedding_func=get_embedding,  # Your function
-    text_column='combined',
-    class_column='class',
-    num_epochs=30,
-    batch_size=32
-)
+# Add probability columns
+for class_name in class_names:
+    prob_col = f'Prob_{class_name}'
+    sample_data[prob_col] = np.random.random(n_samples)
 
-# Use for prediction
-predictions = predict_incident_class(
-    model_path=results['model_save_path'],
-    text="Server experiencing hardware malfunction causing service outage",
-    get_embedding_func=get_embedding
-)
-"""
+# Normalize probabilities to sum to 1 for each row
+prob_cols = [f'Prob_{name}' for name in class_names]
+prob_matrix = np.array([sample_data[col] for col in prob_cols]).T
+prob_matrix = prob_matrix / prob_matrix.sum(axis=1, keepdims=True)
+for i, col in enumerate(prob_cols):
+    sample_data[col] = prob_matrix[:, i]
 
-if __name__ == "__main__":
-    print("Incident Classification System Ready!")
-    print("Please provide your dataframe (df), issue_summary dictionary, and get_embedding function")
-    print("to use train_incident_classifier()")
+df = pd.DataFrame(sample_data)
+
+print("🔍 COMPREHENSIVE ERROR ANALYSIS FOR 8-CLASS CLASSIFICATION MODEL")
+print("=" * 70)
+print(f"Dataset shape: {df.shape}")
+print(f"Classes: {class_names}")
+print("\nFirst few rows:")
+print(df.head())
+
+# ============================================================================
+# 1. BASIC PERFORMANCE METRICS OVERVIEW
+# ============================================================================
+
+print("\n📊 1. BASIC PERFORMANCE METRICS")
+print("-" * 50)
+
+# Get actual and predicted labels
+y_true = df['Real_Label']
+y_pred = df['Predicted_Label']
+
+# Calculate basic metrics
+accuracy = (y_true == y_pred).mean()
+print(f"Overall Accuracy: {accuracy:.4f}")
+
+# Classification report
+print("\nDetailed Classification Report:")
+print(classification_report(y_true, y_pred, target_names=class_names))
+
+# Additional metrics
+macro_precision = precision_score(y_true, y_pred, average='macro')
+macro_recall = recall_score(y_true, y_pred, average='macro')
+macro_f1 = f1_score(y_true, y_pred, average='macro')
+weighted_f1 = f1_score(y_true, y_pred, average='weighted')
+mcc = matthews_corrcoef(y_true, y_pred)
+kappa = cohen_kappa_score(y_true, y_pred)
+
+print(f"\nAdditional Metrics:")
+print(f"Macro Precision: {macro_precision:.4f}")
+print(f"Macro Recall: {macro_recall:.4f}")
+print(f"Macro F1-Score: {macro_f1:.4f}")
+print(f"Weighted F1-Score: {weighted_f1:.4f}")
+print(f"Matthews Correlation Coefficient: {mcc:.4f}")
+print(f"Cohen's Kappa: {kappa:.4f}")
+
+# ============================================================================
+# 2. CONFUSION MATRIX ANALYSIS
+# ============================================================================
+
+def plot_confusion_matrices():
+    """Create comprehensive confusion matrix visualizations"""
+    
+    fig, axes = plt.subplots(2, 2, figsize=(20, 16))
+    
+    # 1. Raw counts confusion matrix
+    cm = confusion_matrix(y_true, y_pred, labels=class_names)
+    
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', 
+                xticklabels=class_names, yticklabels=class_names,
+                ax=axes[0,0], cbar_kws={'label': 'Count'})
+    axes[0,0].set_title('Confusion Matrix - Raw Counts', fontsize=14, fontweight='bold')
+    axes[0,0].set_xlabel('Predicted Label')
+    axes[0,0].set_ylabel('True Label')
+    
+    # 2. Normalized confusion matrix (by true class)
+    cm_norm = confusion_matrix(y_true, y_pred, labels=class_names, normalize='true')
+    
+    sns.heatmap(cm_norm, annot=True, fmt='.3f', cmap='Reds',
+                xticklabels=class_names, yticklabels=class_names,
+                ax=axes[0,1], cbar_kws={'label': 'Recall'})
+    axes[0,1].set_title('Normalized Confusion Matrix - Recall', fontsize=14, fontweight='bold')
+    axes[0,1].set_xlabel('Predicted Label')
+    axes[0,1].set_ylabel('True Label')
+    
+    # 3. Normalized confusion matrix (by predicted class)
+    cm_norm_pred = confusion_matrix(y_true, y_pred, labels=class_names, normalize='pred')
+    
+    sns.heatmap(cm_norm_pred, annot=True, fmt='.3f', cmap='Greens',
+                xticklabels=class_names, yticklabels=class_names,
+                ax=axes[1,0], cbar_kws={'label': 'Precision'})
+    axes[1,0].set_title('Normalized Confusion Matrix - Precision', fontsize=14, fontweight='bold')
+    axes[1,0].set_xlabel('Predicted Label')
+    axes[1,0].set_ylabel('True Label')
+    
+    # 4. Error matrix (showing only misclassifications)
+    cm_errors = cm.copy()
+    np.fill_diagonal(cm_errors, 0)
+    
+    sns.heatmap(cm_errors, annot=True, fmt='d', cmap='Oranges',
+                xticklabels=class_names, yticklabels=class_names,
+                ax=axes[1,1], cbar_kws={'label': 'Error Count'})
+    axes[1,1].set_title('Error Matrix - Misclassifications Only', fontsize=14, fontweight='bold')
+    axes[1,1].set_xlabel('Predicted Label')
+    axes[1,1].set_ylabel('True Label')
+    
+    plt.tight_layout()
+    plt.show()
+    
+    return cm, cm_norm, cm_norm_pred
+
+print("\n🎯 2. CONFUSION MATRIX ANALYSIS")
+print("-" * 50)
+cm, cm_norm, cm_norm_pred = plot_confusion_matrices()
+
+# ============================================================================
+# 3. CLASS-WISE PERFORMANCE ANALYSIS
+# ============================================================================
+
+def analyze_class_performance():
+    """Detailed class-wise performance analysis"""
+    
+    # Calculate per-class metrics
+    class_metrics = []
+    
+    for i, class_name in enumerate(class_names):
+        # Get metrics for this class
+        class_precision = precision_score(y_true, y_pred, labels=[class_name], average=None)[0] if class_name in y_pred.values else 0
+        class_recall = recall_score(y_true, y_pred, labels=[class_name], average=None)[0] if class_name in y_true.values else 0
+        class_f1 = f1_score(y_true, y_pred, labels=[class_name], average=None)[0] if class_name in y_true.values and class_name in y_pred.values else 0
+        
+        # Support (number of true instances)
+        support = sum(y_true == class_name)
+        
+        # Predicted instances
+        predicted_count = sum(y_pred == class_name)
+        
+        class_metrics.append({
+            'Class': class_name,
+            'Precision': class_precision,
+            'Recall': class_recall,
+            'F1-Score': class_f1,
+            'Support': support,
+            'Predicted_Count': predicted_count
+        })
+    
+    metrics_df = pd.DataFrame(class_metrics)
+    
+    # Create visualization
+    fig, axes = plt.subplots(2, 2, figsize=(20, 12))
+    
+    # 1. Precision, Recall, F1 comparison
+    x_pos = np.arange(len(class_names))
+    width = 0.25
+    
+    axes[0,0].bar(x_pos - width, metrics_df['Precision'], width, label='Precision', alpha=0.8)
+    axes[0,0].bar(x_pos, metrics_df['Recall'], width, label='Recall', alpha=0.8)
+    axes[0,0].bar(x_pos + width, metrics_df['F1-Score'], width, label='F1-Score', alpha=0.8)
+    
+    axes[0,0].set_xlabel('Classes')
+    axes[0,0].set_ylabel('Score')
+    axes[0,0].set_title('Class-wise Performance Metrics', fontweight='bold')
+    axes[0,0].set_xticks(x_pos)
+    axes[0,0].set_xticklabels(class_names, rotation=45)
+    axes[0,0].legend()
+    axes[0,0].grid(True, alpha=0.3)
+    
+    # 2. Support vs Predicted Count
+    axes[0,1].bar(x_pos - width/2, metrics_df['Support'], width, label='True Count', alpha=0.8)
+    axes[0,1].bar(x_pos + width/2, metrics_df['Predicted_Count'], width, label='Predicted Count', alpha=0.8)
+    
+    axes[0,1].set_xlabel('Classes')
+    axes[0,1].set_ylabel('Count')
+    axes[0,1].set_title('True vs Predicted Class Distribution', fontweight='bold')
+    axes[0,1].set_xticks(x_pos)
+    axes[0,1].set_xticklabels(class_names, rotation=45)
+    axes[0,1].legend()
+    axes[0,1].grid(True, alpha=0.3)
+    
+    # 3. Class imbalance visualization
+    class_distribution = y_true.value_counts()
+    axes[1,0].pie(class_distribution.values, labels=class_distribution.index, autopct='%1.1f%%')
+    axes[1,0].set_title('True Class Distribution', fontweight='bold')
+    
+    # 4. Prediction vs Reality scatter
+    pred_distribution = y_pred.value_counts().reindex(class_names, fill_value=0)
+    true_distribution = y_true.value_counts().reindex(class_names, fill_value=0)
+    
+    axes[1,1].scatter(true_distribution.values, pred_distribution.values, s=100, alpha=0.7)
+    for i, class_name in enumerate(class_names):
+        axes[1,1].annotate(class_name, (true_distribution[class_name], pred_distribution[class_name]),
+                          xytext=(5, 5), textcoords='offset points')
+    
+    # Add diagonal line for perfect prediction
+    max_val = max(max(true_distribution.values), max(pred_distribution.values))
+    axes[1,1].plot([0, max_val], [0, max_val], 'r--', alpha=0.5)
+    
+    axes[1,1].set_xlabel('True Count')
+    axes[1,1].set_ylabel('Predicted Count')
+    axes[1,1].set_title('Prediction vs Reality Distribution', fontweight='bold')
+    axes[1,1].grid(True, alpha=0.3)
+    
+    plt.tight_layout()
+    plt.show()
+    
+    return metrics_df
+
+print("\n📈 3. CLASS-WISE PERFORMANCE ANALYSIS")
+print("-" * 50)
+metrics_df = analyze_class_performance()
+print("\nClass-wise Metrics Summary:")
+print(metrics_df.round(4))
+
+# ============================================================================
+# 4. CONFIDENCE ANALYSIS
+# ============================================================================
+
+def analyze_prediction_confidence():
+    """Analyze model confidence and calibration"""
+    
+    # Get probability columns
+    prob_cols = [f'Prob_{name}' for name in class_names]
+    
+    # Calculate max probability for each prediction
+    max_probs = df[prob_cols].max(axis=1)
+    predicted_classes = df[prob_cols].idxmax(axis=1).str.replace('Prob_', '')
+    
+    # Calculate confidence statistics
+    df['Max_Probability'] = max_probs
+    df['Predicted_Class_Confidence'] = predicted_classes
+    df['Is_Correct'] = (df['Real_Label'] == df['Predicted_Label'])
+    
+    fig, axes = plt.subplots(2, 2, figsize=(20, 12))
+    
+    # 1. Confidence distribution for correct vs incorrect predictions
+    correct_conf = df[df['Is_Correct']]['Max_Probability']
+    incorrect_conf = df[~df['Is_Correct']]['Max_Probability']
+    
+    axes[0,0].hist(correct_conf, bins=30, alpha=0.7, label='Correct', density=True)
+    axes[0,0].hist(incorrect_conf, bins=30, alpha=0.7, label='Incorrect', density=True)
+    axes[0,0].set_xlabel('Max Probability')
+    axes[0,0].set_ylabel('Density')
+    axes[0,0].set_title('Confidence Distribution: Correct vs Incorrect Predictions', fontweight='bold')
+    axes[0,0].legend()
+    axes[0,0].grid(True, alpha=0.3)
+    
+    # 2. Calibration plot
+    # Bin predictions by confidence
+    n_bins = 10
+    bin_boundaries = np.linspace(0, 1, n_bins + 1)
+    bin_lowers = bin_boundaries[:-1]
+    bin_uppers = bin_boundaries[1:]
+    
+    accuracies = []
+    confidences = []
+    
+    for bin_lower, bin_upper in zip(bin_lowers, bin_uppers):
+        in_bin = (max_probs > bin_lower) & (max_probs <= bin_upper)
+        prop_in_bin = in_bin.mean()
+        
+        if prop_in_bin > 0:
+            accuracy_in_bin = df[in_bin]['Is_Correct'].mean()
+            avg_confidence_in_bin = max_probs[in_bin].mean()
+            accuracies.append(accuracy_in_bin)
+            confidences.append(avg_confidence_in_bin)
+    
+    axes[0,1].plot([0, 1], [0, 1], 'r--', label='Perfect Calibration')
+    axes[0,1].plot(confidences, accuracies, 'bo-', label='Model Calibration')
+    axes[0,1].set_xlabel('Mean Predicted Probability')
+    axes[0,1].set_ylabel('Fraction of Positives')
+    axes[0,1].set_title('Calibration Plot', fontweight='bold')
+    axes[0,1].legend()
+    axes[0,1].grid(True, alpha=0.3)
+    
+    # 3. Confidence vs accuracy by bins
+    confidence_bins = pd.cut(max_probs, bins=10)
+    conf_analysis = df.groupby(confidence_bins).agg({
+        'Is_Correct': ['mean', 'count'],
+        'Max_Probability': 'mean'
+    }).round(3)
+    
+    bin_centers = [interval.mid for interval in conf_analysis.index]
+    accuracies_by_bin = conf_analysis[('Is_Correct', 'mean')]
+    counts_by_bin = conf_analysis[('Is_Correct', 'count')]
+    
+    bars = axes[1,0].bar(range(len(bin_centers)), accuracies_by_bin, alpha=0.7)
+    axes[1,0].set_xlabel('Confidence Bins')
+    axes[1,0].set_ylabel('Accuracy')
+    axes[1,0].set_title('Accuracy by Confidence Bins', fontweight='bold')
+    axes[1,0].set_xticks(range(len(bin_centers)))
+    axes[1,0].set_xticklabels([f'{x:.2f}' for x in bin_centers], rotation=45)
+    axes[1,0].grid(True, alpha=0.3)
+    
+    # Add count annotations
+    for i, (bar, count) in enumerate(zip(bars, counts_by_bin)):
+        axes[1,0].annotate(f'n={count}', (bar.get_x() + bar.get_width()/2, bar.get_height()),
+                          ha='center', va='bottom')
+    
+    # 4. Class-wise confidence analysis
+    class_conf_stats = []
+    for class_name in class_names:
+        class_mask = df['Real_Label'] == class_name
+        if class_mask.sum() > 0:
+            correct_mask = class_mask & df['Is_Correct']
+            incorrect_mask = class_mask & ~df['Is_Correct']
+            
+            avg_conf_correct = df[correct_mask]['Max_Probability'].mean() if correct_mask.sum() > 0 else 0
+            avg_conf_incorrect = df[incorrect_mask]['Max_Probability'].mean() if incorrect_mask.sum() > 0 else 0
+            
+            class_conf_stats.append({
+                'Class': class_name,
+                'Avg_Conf_Correct': avg_conf_correct,
+                'Avg_Conf_Incorrect': avg_conf_incorrect,
+                'Confidence_Gap': avg_conf_correct - avg_conf_incorrect
+            })
+    
+    conf_stats_df = pd.DataFrame(class_conf_stats)
+    
+    x_pos = np.arange(len(class_names))
+    width = 0.35
+    
+    axes[1,1].bar(x_pos - width/2, conf_stats_df['Avg_Conf_Correct'], width, 
+                  label='Correct Predictions', alpha=0.8)
+    axes[1,1].bar(x_pos + width/2, conf_stats_df['Avg_Conf_Incorrect'], width,
+                  label='Incorrect Predictions', alpha=0.8)
+    
+    axes[1,1].set_xlabel('Classes')
+    axes[1,1].set_ylabel('Average Confidence')
+    axes[1,1].set_title('Average Confidence by Class and Correctness', fontweight='bold')
+    axes[1,1].set_xticks(x_pos)
+    axes[1,1].set_xticklabels(class_names, rotation=45)
+    axes[1,1].legend()
+    axes[1,1].grid(True, alpha=0.3)
+    
+    plt.tight_layout()
+    plt.show()
+    
+    return df, conf_stats_df
+
+print("\n🎯 4. CONFIDENCE ANALYSIS")
+print("-" * 50)
+df_with_conf, conf_stats_df = analyze_prediction_confidence()
+print("\nConfidence Statistics by Class:")
+print(conf_stats_df.round(4))
+
+# ============================================================================
+# 5. ERROR PATTERN ANALYSIS
+# ============================================================================
+
+def analyze_error_patterns():
+    """Deep dive into error patterns and misclassification analysis"""
+    
+    # Get misclassified samples
+    misclassified = df_with_conf[~df_with_conf['Is_Correct']].copy()
+    
+    print(f"Total misclassifications: {len(misclassified)} out of {len(df_with_conf)} ({len(misclassified)/len(df_with_conf)*100:.2f}%)")
+    
+    fig, axes = plt.subplots(2, 2, figsize=(20, 12))
+    
+    # 1. Most common misclassification pairs
+    error_pairs = misclassified.groupby(['Real_Label', 'Predicted_Label']).size().reset_index(name='Count')
+    error_pairs = error_pairs.sort_values('Count', ascending=False).head(15)
+    
+    error_labels = [f"{row['Real_Label']} → {row['Predicted_Label']}" for _, row in error_pairs.iterrows()]
+    
+    axes[0,0].barh(range(len(error_pairs)), error_pairs['Count'])
+    axes[0,0].set_yticks(range(len(error_pairs)))
+    axes[0,0].set_yticklabels(error_labels)
+    axes[0,0].set_xlabel('Error Count')
+    axes[0,0].set_title('Top 15 Misclassification Patterns', fontweight='bold')
+    axes[0,0].grid(True, alpha=0.3)
+    
+    # 2. Error rate by confidence level
+    conf_bins = pd.cut(misclassified['Max_Probability'], bins=10)
+    error_by_conf = misclassified.groupby(conf_bins).size()
+    total_by_conf = df_with_conf.groupby(pd.cut(df_with_conf['Max_Probability'], bins=10)).size()
+    error_rate_by_conf = (error_by_conf / total_by_conf).fillna(0)
+    
+    bin_centers = [interval.mid for interval in error_rate_by_conf.index]
+    
+    axes[0,1].plot(bin_centers, error_rate_by_conf.values, 'ro-', linewidth=2, markersize=8)
+    axes[0,1].set_xlabel('Confidence Level')
+    axes[0,1].set_ylabel('Error Rate')
+    axes[0,1].set_title('Error Rate by Confidence Level', fontweight='bold')
+    axes[0,1].grid(True, alpha=0.3)
+    
+    # 3. Class-wise error analysis
+    class_errors = []
+    for class_name in class_names:
+        true_class_mask = df_with_conf['Real_Label'] == class_name
+        pred_class_mask = df_with_conf['Predicted_Label'] == class_name
+        
+        # False Negatives (missed detections)
+        fn_mask = true_class_mask & ~df_with_conf['Is_Correct']
+        fn_count = fn_mask.sum()
+        
+        # False Positives (false alarms)
+        fp_mask = pred_class_mask & ~df_with_conf['Is_Correct']
+        fp_count = fp_mask.sum()
+        
+        # True Positives
+        tp_mask = true_class_mask & df_with_conf['Is_Correct']
+        tp_count = tp_mask.sum()
+        
+        class_errors.append({
+            'Class': class_name,
+            'False_Negatives': fn_count,
+            'False_Positives': fp_count,
+            'True_Positives': tp_count
+        })
+    
+    error_df = pd.DataFrame(class_errors)
+    
+    x_pos = np.arange(len(class_names))
+    width = 0.35
+    
+    axes[1,0].bar(x_pos - width/2, error_df['False_Negatives'], width, 
+                  label='False Negatives (Missed)', alpha=0.8, color='red')
+    axes[1,0].bar(x_pos + width/2, error_df['False_Positives'], width,
+                  label='False Positives (False Alarms)', alpha=0.8, color='orange')
+    
+    axes[1,0].set_xlabel('Classes')
+    axes[1,0].set_ylabel('Error Count')
+    axes[1,0].set_title('False Negatives vs False Positives by Class', fontweight='bold')
+    axes[1,0].set_xticks(x_pos)
+    axes[1,0].set_xticklabels(class_names, rotation=45)
+    axes[1,0].legend()
+    axes[1,0].grid(True, alpha=0.3)
+    
+    # 4. Confusion between similar classes (heatmap of normalized errors)
+    cm_errors = confusion_matrix(y_true, y_pred, labels=class_names)
+    np.fill_diagonal(cm_errors, 0)  # Remove diagonal (correct predictions)
+    
+    # Normalize by row (true class) to show where each class gets confused
+    cm_errors_norm = cm_errors / cm_errors.sum(axis=1, keepdims=True)
+    cm_errors_norm = np.nan_to_num(cm_errors_norm)  # Handle division by zero
+    
+    sns.heatmap(cm_errors_norm, annot=True, fmt='.3f', cmap='Reds',
+                xticklabels=class_names, yticklabels=class_names,
+                ax=axes[1,1], cbar_kws={'label': 'Error Rate'})
+    axes[1,1].set_title('Class Confusion Patterns (Normalized)', fontweight='bold')
+    axes[1,1].set_xlabel('Predicted Label')
+    axes[1,1].set_ylabel('True Label')
+    
+    plt.tight_layout()
+    plt.show()
+    
+    return error_pairs, error_df
+
+print("\n⚠️ 5. ERROR PATTERN ANALYSIS")
+print("-" * 50)
+error_pairs, error_df = analyze_error_patterns()
+print("\nTop Error Patterns:")
+print(error_pairs.head(10))
+
+# ============================================================================
+# 6. ROC AND PRECISION-RECALL CURVES (One-vs-Rest)
+# ============================================================================
+
+def plot_roc_and_pr_curves():
+    """Plot ROC and Precision-Recall curves for each class"""
+    
+    # Binarize the labels for one-vs-rest analysis
+    prob_cols = [f'Prob_{name}' for name in class_names]
+    y_proba = df[prob_cols].values
+    
+    # Create binary labels for each class
+    y_bin = label_binarize(y_true, classes=class_names)
+    
+    fig, axes = plt.subplots(2, 2, figsize=(20, 16))
+    
+    # Colors for each class
+    colors = plt.cm.Set3(np.linspace(0, 1, len(class_names)))
+    
+    # 1. ROC Curves
+    for i, (class_name, color) in enumerate(zip(class_names, colors)):
+        fpr, tpr, _ = roc_curve(y_bin[:, i], y_proba[:, i])
+        roc_auc = auc(fpr, tpr)
+        
+        axes[0,0].plot(fpr, tpr, color=color, lw=2,
+                       label=f'{class_name} (AUC = {roc_auc:.3f})')
+    
+    axes[0,0].plot([0, 1], [0, 1], 'k--', lw=2, label='Random Classifier')
+    axes[0,0].set_xlim([0.0, 1.0])
+    axes[0,0].set_ylim([0.0, 1.05])
+    axes[0,0].set_xlabel('False Positive Rate')
+    axes[0,0].set_ylabel('True Positive Rate')
+    axes[0,0].set_title('ROC Curves (One-vs-Rest)', fontweight='bold')
+    axes[0,0].legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+    axes[0,0].grid(True, alpha=0.3)
+    
+    # 2. Precision-Recall Curves
+    for i, (class_name, color) in enumerate(zip(class_names, colors)):
+        precision, recall, _ = precision_recall_curve(y_bin[:, i], y_proba[:, i])
+        pr_auc = auc(recall, precision)
+        
+        axes[0,1].plot(recall, precision, color=color, lw=2,
+                       label=f'{class_name} (AUC = {pr_auc:.3f})')
+    
+    # Add baseline (random classifier)
+    baseline = y_bin.mean(axis=0)
+    for i, (class_name, bl) in enumerate(zip(class_names, baseline)):
+        axes[0,1].axhline(y=bl, color=colors[i], linestyle='--', alpha=0.5)
+    
+    axes[0,1].set_xlim([0.0, 1.0])
+    axes[0,1].set_ylim([0.0, 1.05])
+    axes[0,1].set_xlabel('Recall')
+    axes[0,1].set_ylabel('Precision')
+    axes[0,1].set_title('Precision-Recall Curves (One-vs-Rest)', fontweight='bold')
+    axes[0,1].legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+    axes[0,1].grid(True, alpha=0.3)
+    
+    # 3. AUC Comparison
+    roc_aucs = []
+    pr_aucs = []
+    
+    for i, class_name in enumerate(class_names):
+        fpr, tpr, _ = roc_curve(y_bin[:, i], y_proba[:, i])
+        roc_auc = auc(fpr, tpr)
+        roc_aucs.append(roc_auc)
+        
+        precision, recall, _ = precision_recall_curve(y_bin[:, i], y_proba[:, i])
+        pr_auc = auc(recall, precision)
+        pr_aucs.append(pr_auc)
+    
+    x_pos = np.arange(len(class_names))
+    width = 0.35
+    
+    axes[1,0].bar(x_pos - width/2, roc_aucs, width, label='ROC-AUC', alpha=0.8)
+    axes[1,0].bar(x_pos + width/2, pr_aucs, width, label='PR-AUC', alpha=0.8)
+    
+    axes[1,0].set_xlabel('Classes')
+    axes[1,0].set_ylabel('AUC Score')
+    axes[1,0].set_title('AUC Comparison: ROC vs Precision-Recall', fontweight='bold')
+    axes[1,0].set_xticks(x_pos)
+    axes[1,0].set_xticklabels(class_names, rotation=45)
+    axes[1,0].legend()
+    axes[1,0].grid(True, alpha=0.3)
+    axes[1,0].set_ylim([0, 1])
+    
+    # 4. Threshold Analysis for Best F1 Score
+    f1_scores_by_class = []
+    best_thresholds = []
+    
+    for i, class_name in enumerate(class_names):
+        precision, recall, thresholds = precision_recall_curve(y_bin[:, i], y_proba[:, i])
+        f1_scores = 2 * (precision * recall) / (precision + recall)
+        f1_scores = np.nan_to_num(f1_scores)
+        
+        best_threshold_idx = np.argmax(f1_scores)
+        best_f1 = f1_scores[best_threshold_idx]
+        best_threshold = thresholds[best_threshold_idx] if best_threshold_idx < len(thresholds) else 0.5
+        
+        f1_scores_by_class.append(best_f1)
+        best_thresholds.append(best_threshold)
+    
+    # Create scatter plot
+    scatter = axes[1,1].scatter(best_thresholds, f1_scores_by_class, 
+                               c=range(len(class_names)), s=100, alpha=0.7, cmap='viridis')
+    
+    for i, class_name in enumerate(class_names):
+        axes[1,1].annotate(class_name, (best_thresholds[i], f1_scores_by_class[i]),
+                          xytext=(5, 5), textcoords='offset points', fontsize=10)
+    
+    axes[1,1].set_xlabel('Optimal Threshold')
+    axes[1,1].set_ylabel('Best F1 Score')
+    axes[1,1].set_title('Optimal Thresholds for Maximum F1 Score', fontweight='bold')
+    axes[1,1].grid(True, alpha=0.3)
+    
+    plt.tight_layout()
+    plt.show()
+    
+    # Create summary table
+    auc_summary = pd.DataFrame({
+        'Class': class_names,
+        'ROC_AUC': roc_aucs,
+        'PR_AUC': pr_aucs,
+        'Best_F1': f1_scores_by_class,
+        'Optimal_Threshold': best_thresholds
+    })
+    
+    return auc_summary
+
+print("\n📊 6. ROC AND PRECISION-RECALL CURVES")
+print("-" * 50)
+auc_summary = plot_roc_and_pr_curves()
+print("\nAUC Summary:")
+print(auc_summary.round(4))
+
+# ============================================================================
+# 7. PROBABILITY DISTRIBUTION ANALYSIS
+# ============================================================================
+
+def analyze_probability_distributions():
+    """Analyze the distribution of predicted probabilities"""
+    
+    prob_cols = [f'Prob_{name}' for name in class_names]
+    
+    fig, axes = plt.subplots(2, 2, figsize=(20, 12))
+    
+    # 1. Probability distributions for each class
+    for i, class_name in enumerate(class_names):
+        prob_col = f'Prob_{class_name}'
+        
+        # Separate by correct vs incorrect predictions
+        correct_mask = (df_with_conf['Real_Label'] == class_name) & df_with_conf['Is_Correct']
+        incorrect_mask = (df_with_conf['Real_Label'] == class_name) & ~df_with_conf['Is_Correct']
+        
+        if correct_mask.sum() > 0:
+            axes[0,0].hist(df_with_conf[correct_mask][prob_col], bins=20, alpha=0.5, 
+                          label=f'{class_name} (Correct)', density=True)
+        if incorrect_mask.sum() > 0:
+            axes[0,0].hist(df_with_conf[incorrect_mask][prob_col], bins=20, alpha=0.5,
+                          label=f'{class_name} (Incorrect)', density=True)
+    
+    axes[0,0].set_xlabel('Predicted Probability')
+    axes[0,0].set_ylabel('Density')
+    axes[0,0].set_title('Probability Distributions: Correct vs Incorrect', fontweight='bold')
+    axes[0,0].legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+    axes[0,0].grid(True, alpha=0.3)
+    
+    # 2. Entropy analysis
+    def calculate_entropy(probs):
+        """Calculate Shannon entropy"""
+        probs = np.array(probs)
+        probs = probs + 1e-15  # Add small value to avoid log(0)
+        return -np.sum(probs * np.log2(probs), axis=1)
+    
+    entropy = calculate_entropy(df_with_conf[prob_cols].values)
+    df_with_conf['Entropy'] = entropy
+    
+    # Plot entropy distribution
+    correct_entropy = df_with_conf[df_with_conf['Is_Correct']]['Entropy']
+    incorrect_entropy = df_with_conf[~df_with_conf['Is_Correct']]['Entropy']
+    
+    axes[0,1].hist(correct_entropy, bins=30, alpha=0.7, label='Correct', density=True)
+    axes[0,1].hist(incorrect_entropy, bins=30, alpha=0.7, label='Incorrect', density=True)
+    axes[0,1].set_xlabel('Prediction Entropy')
+    axes[0,1].set_ylabel('Density')
+    axes[0,1].set_title('Prediction Uncertainty (Entropy) Distribution', fontweight='bold')
+    axes[0,1].legend()
+    axes[0,1].grid(True, alpha=0.3)
+    
+    # 3. Top-2 probability analysis
+    # Get top 2 probabilities for each prediction
+    top2_probs = np.sort(df_with_conf[prob_cols].values, axis=1)[:, -2:]
+    prob_gap = top2_probs[:, 1] - top2_probs[:, 0]  # Difference between top 2
+    
+    df_with_conf['Prob_Gap'] = prob_gap
+    
+    correct_gap = df_with_conf[df_with_conf['Is_Correct']]['Prob_Gap']
+    incorrect_gap = df_with_conf[~df_with_conf['Is_Correct']]['Prob_Gap']
+    
+    axes[1,0].hist(correct_gap, bins=30, alpha=0.7, label='Correct', density=True)
+    axes[1,0].hist(incorrect_gap, bins=30, alpha=0.7, label='Incorrect', density=True)
+    axes[1,0].set_xlabel('Probability Gap (Top1 - Top2)')
+    axes[1,0].set_ylabel('Density')
+    axes[1,0].set_title('Decision Margin Analysis', fontweight='bold')
+    axes[1,0].legend()
+    axes[1,0].grid(True, alpha=0.3)
+    
+    # 4. Class-wise probability statistics
+    prob_stats = []
+    for class_name in class_names:
+        prob_col = f'Prob_{class_name}'
+        class_mask = df_with_conf['Real_Label'] == class_name
+        
+        if class_mask.sum() > 0:
+            correct_probs = df_with_conf[class_mask & df_with_conf['Is_Correct']][prob_col]
+            incorrect_probs = df_with_conf[class_mask & ~df_with_conf['Is_Correct']][prob_col]
+            
+            prob_stats.append({
+                'Class': class_name,
+                'Mean_Prob_Correct': correct_probs.mean() if len(correct_probs) > 0 else 0,
+                'Mean_Prob_Incorrect': incorrect_probs.mean() if len(incorrect_probs) > 0 else 0,
+                'Std_Prob_Correct': correct_probs.std() if len(correct_probs) > 0 else 0,
+                'Std_Prob_Incorrect': incorrect_probs.std() if len(incorrect_probs) > 0 else 0
+            })
+    
+    prob_stats_df = pd.DataFrame(prob_stats)
+    
+    x_pos = np.arange(len(class_names))
+    width = 0.35
+    
+    bars1 = axes[1,1].bar(x_pos - width/2, prob_stats_df['Mean_Prob_Correct'], width,
+                         yerr=prob_stats_df['Std_Prob_Correct'], label='Correct', alpha=0.8,
+                         capsize=5)
+    bars2 = axes[1,1].bar(x_pos + width/2, prob_stats_df['Mean_Prob_Incorrect'], width,
+                         yerr=prob_stats_df['Std_Prob_Incorrect'], label='Incorrect', alpha=0.8,
+                         capsize=5)
+    
+    axes[1,1].set_xlabel('Classes')
+    axes[1,1].set_ylabel('Mean Probability')
+    axes[1,1].set_title('Mean Predicted Probability by Class and Correctness', fontweight='bold')
+    axes[1,1].set_xticks(x_pos)
+    axes[1,1].set_xticklabels(class_names, rotation=45)
+    axes[1,1].legend()
+    axes[1,1].grid(True, alpha=0.3)
+    
+    plt.tight_layout()
+    plt.show()
+    
+    return prob_stats_df
+
+print("\n🎲 7. PROBABILITY DISTRIBUTION ANALYSIS")
+print("-" * 50)
+prob_stats_df = analyze_probability_distributions()
+print("\nProbability Statistics by Class:")
+print(prob_stats_df.round(4))
+
+# ============================================================================
+# 8. MISCLASSIFICATION DEEP DIVE
+# ============================================================================
+
+def misclassification_deep_dive():
+    """Detailed analysis of misclassified samples"""
+    
+    misclassified = df_with_conf[~df_with_conf['Is_Correct']].copy()
+    
+    print(f"\n📋 MISCLASSIFICATION SAMPLE ANALYSIS")
+    print(f"Analyzing {len(misclassified)} misclassified samples...")
+    
+    # Find most confident wrong predictions
+    top_confident_wrong = misclassified.nlargest(10, 'Max_Probability')
+    
+    print("\n🚨 TOP 10 MOST CONFIDENT WRONG PREDICTIONS:")
+    print("-" * 60)
+    for idx, row in top_confident_wrong.iterrows():
+        print(f"ID: {row['INC_Number']}")
+        print(f"  True: {row['Real_Label']} → Predicted: {row['Predicted_Label']}")
+        print(f"  Confidence: {row['Max_Probability']:.4f}")
+        print(f"  True class probability: {row[f'Prob_{row[\"Real_Label\"]}']:.4f}")
+        print()
+    
+    # Find least confident correct predictions
+    correct_preds = df_with_conf[df_with_conf['Is_Correct']].copy()
+    least_confident_correct = correct_preds.nsmallest(10, 'Max_Probability')
+    
+    print("\n✅ TOP 10 LEAST CONFIDENT CORRECT PREDICTIONS:")
+    print("-" * 60)
+    for idx, row in least_confident_correct.iterrows():
+        print(f"ID: {row['INC_Number']}")
+        print(f"  Class: {row['Real_Label']}")
+        print(f"  Confidence: {row['Max_Probability']:.4f}")
+        print(f"  Entropy: {row['Entropy']:.4f}")
+        print()
+    
+    # Create visualization
+    fig, axes = plt.subplots(2, 2, figsize=(20, 12))
+    
+    # 1. Error analysis by confidence quartiles
+    conf_quartiles = pd.qcut(df_with_conf['Max_Probability'], q=4, labels=['Q1', 'Q2', 'Q3', 'Q4'])
+    error_by_quartile = df_with_conf.groupby(conf_quartiles)['Is_Correct'].agg(['mean', 'count'])
+    
+    axes[0,0].bar(error_by_quartile.index, 1 - error_by_quartile['mean'], alpha=0.7)
+    axes[0,0].set_xlabel('Confidence Quartiles')
+    axes[0,0].set_ylabel('Error Rate')
+    axes[0,0].set_title('Error Rate by Confidence Quartiles', fontweight='bold')
+    
+    # Add count annotations
+    for i, (quartile, row) in enumerate(error_by_quartile.iterrows()):
+        axes[0,0].annotate(f'n={row["count"]}', (i, 1 - row['mean']),
+                          ha='center', va='bottom')
+    axes[0,0].grid(True, alpha=0.3)
+    
+    # 2. Hardest classes to predict (highest error rate)
+    class_error_rates = []
+    for class_name in class_names:
+        class_mask = df_with_conf['Real_Label'] == class_name
+        if class_mask.sum() > 0:
+            error_rate = (~df_with_conf[class_mask]['Is_Correct']).mean()
+            class_error_rates.append({'Class': class_name, 'Error_Rate': error_rate})
+    
+    error_rates_df = pd.DataFrame(class_error_rates).sort_values('Error_Rate', ascending=True)
+    
+    axes[0,1].barh(range(len(error_rates_df)), error_rates_df['Error_Rate'], alpha=0.7)
+    axes[0,1].set_yticks(range(len(error_rates_df)))
+    axes[0,1].set_yticklabels(error_rates_df['Class'])
+    axes[0,1].set_xlabel('Error Rate')
+    axes[0,1].set_title('Class Difficulty Ranking (Error Rate)', fontweight='bold')
+    axes[0,1].grid(True, alpha=0.3)
+    
+    # 3. Confusion vs Confidence scatter
+    axes[1,0].scatter(df_with_conf['Max_Probability'], df_with_conf['Entropy'], 
+                     c=df_with_conf['Is_Correct'], alpha=0.6, cmap='RdYlGn')
+    axes[1,0].set_xlabel('Max Probability (Confidence)')
+    axes[1,0].set_ylabel('Entropy (Uncertainty)')
+    axes[1,0].set_title('Confidence vs Uncertainty (Green=Correct, Red=Wrong)', fontweight='bold')
+    axes[1,0].grid(True, alpha=0.3)
+    
+    # 4. Decision boundary analysis
+    # Show probability gap vs correctness
+    axes[1,1].boxplot([df_with_conf[df_with_conf['Is_Correct']]['Prob_Gap'],
+                      df_with_conf[~df_with_conf['Is_Correct']]['Prob_Gap']],
+                     labels=['Correct', 'Incorrect'])
+    axes[1,1].set_ylabel('Probability Gap (Top1 - Top2)')
+    axes[1,1].set_title('Decision Margin: Correct vs Incorrect Predictions', fontweight='bold')
+    axes[1,1].grid(True, alpha=0.3)
+    
+    plt.tight_layout()
+    plt.show()
+    
+    return top_confident_wrong, least_confident_correct, error_rates_df
+
+top_confident_wrong, least_confident_correct, error_rates_df = misclassification_deep_dive()
+
+# ============================================================================
+# 9. RECOMMENDATIONS AND ACTION ITEMS
+# ============================================================================
+
+def generate_recommendations():
+    """Generate actionable recommendations based on error analysis"""
+    
+    print("\n🎯 RECOMMENDATIONS AND ACTION ITEMS")
+    print("=" * 70)
+    
+    # Analyze key issues
+    overall_accuracy = (y_true == y_pred).mean()
+    
+    print(f"\n📊 OVERALL MODEL PERFORMANCE")
+    print(f"   • Overall Accuracy: {overall_accuracy:.1%}")
+    print(f"   • Macro F1-Score: {f1_score(y_true, y_pred, average='macro'):.3f}")
+    print(f"   • Cohen's Kappa: {cohen_kappa_score(y_true, y_pred):.3f}")
+    
+    # Identify problematic classes
+    class_f1_scores = []
+    for class_name in class_names:
+        if class_name in y_true.values and class_name in y_pred.values:
+            f1 = f1_score(y_true, y_pred, labels=[class_name], average=None)[0]
+        else:
+            f1 = 0
+        class_f1_scores.append((class_name, f1))
+    
+    class_f1_scores.sort(key=lambda x: x[1])
+    worst_classes = class_f1_scores[:3]
+    best_classes = class_f1_scores[-3:]
+    
+    print(f"\n🔴 CLASSES NEEDING ATTENTION (Lowest F1-Scores):")
+    for class_name, f1 in worst_classes:
+        print(f"   • {class_name}: F1 = {f1:.3f}")
+    
+    print(f"\n🟢 BEST PERFORMING CLASSES:")
+    for class_name, f1 in best_classes:
+        print(f"   • {class_name}: F1 = {f1:.3f}")
+    
+    # Confidence analysis insights
+    avg_conf_correct = df_with_conf[df_with_conf['Is_Correct']]['Max_Probability'].mean()
+    avg_conf_incorrect = df_with_conf[~df_with_conf['Is_Correct']]['Max_Probability'].mean()
+    
+    print(f"\n🎯 CONFIDENCE ANALYSIS:")
+    print(f"   • Average confidence (correct): {avg_conf_correct:.3f}")
+    print(f"   • Average confidence (incorrect): {avg_conf_incorrect:.3f}")
+    print(f"   • Confidence gap: {avg_conf_correct - avg_conf_incorrect:.3f}")
+    
+    # Generate specific recommendations
+    recommendations = []
+    
+    # 1. Data-related recommendations
+    if overall_accuracy < 0.8:
+        recommendations.append("🔍 DATA QUALITY: Consider collecting more training data, especially for underperforming classes")
+    
+    # 2. Class imbalance recommendations
+    class_counts = y_true.value_counts()
+    max_count = class_counts.max()
+    min_count = class_counts.min()
+    imbalance_ratio = max_count / min_count
+    
+    if imbalance_ratio > 3:
+        recommendations.append(f"⚖️ CLASS IMBALANCE: Address class imbalance (ratio: {imbalance_ratio:.1f}:1) using techniques like SMOTE, class weights, or focal loss")
+    
+    # 3. Model confidence recommendations
+    if avg_conf_incorrect > 0.7:
+        recommendations.append("🎯 OVERCONFIDENCE: Model is overconfident in wrong predictions. Consider calibration techniques")
+    
+    # 4. Confusion-specific recommendations
+    top_confusion = error_pairs.head(3)
+    if len(top_confusion) > 0:
+        most_confused = top_confusion.iloc[0]
+        recommendations.append(f"🔄 CONFUSION PATTERN: Address confusion between '{most_confused['Real_Label']}' and '{most_confused['Predicted_Label']}' ({most_confused['Count']} cases)")
+    
+    # 5. Feature engineering recommendations
+    high_entropy_errors = len(df_with_conf[(~df_with_conf['Is_Correct']) & (df_with_conf['Entropy'] > 2.5)])
+    if high_entropy_errors > len(df_with_conf) * 0.1:
+        recommendations.append("🔧 FEATURE ENGINEERING: High uncertainty in predictions suggests need for better features")
+    
+    print(f"\n💡 SPECIFIC RECOMMENDATIONS:")
+    for i, rec in enumerate(recommendations, 1):
+        print(f"   {i}. {rec}")
+    
+    # Priority actions
+    print(f"\n🚨 PRIORITY ACTIONS:")
+    print(f"   1. Focus on improving: {', '.join([c[0] for c in worst_classes])}")
+    print(f"   2. Investigate top confusion patterns")
+    print(f"   3. Implement confidence calibration")
+    print(f"   4. Consider ensemble methods for difficult cases")
+    
+    return recommendations
+
+recommendations = generate_recommendations()
+
+# ============================================================================
+# 10. SUMMARY REPORT
+# ============================================================================
+
+def create_summary_report():
+    """Create a comprehensive summary report"""
+    
+    print("\n📋 COMPREHENSIVE ERROR ANALYSIS SUMMARY")
+    print("=" * 70)
+    
+    # Key metrics
+    overall_accuracy = (y_true == y_pred).mean()
+    macro_f1 = f1_score(y_true, y_pred, average='macro')
+    weighted_f1 = f1_score(y_true, y_pred, average='weighted')
+    
+    print(f"\n🔢 KEY PERFORMANCE METRICS:")
+    print(f"   • Overall Accuracy: {overall_accuracy:.1%}")
+    print(f"   • Macro F1-Score: {macro_f1:.3f}")
+    print(f"   • Weighted F1-Score: {weighted_f1:.3f}")
+    print(f"   • Matthews Correlation Coefficient: {matthews_corrcoef(y_true, y_pred):.3f}")
+    print(f"   • Cohen's Kappa: {cohen_kappa_score(y_true, y_pred):.3f}")
+    
+    # Error statistics
+    total_errors = (~df_with_conf['Is_Correct']).sum()
+    error_rate = total_errors / len(df_with_conf)
+    
+    print(f"\n❌ ERROR STATISTICS:")
+    print(f"   • Total Errors: {total_errors:,} out of {len(df_with_conf):,}")
+    print(f"   • Error Rate: {error_rate:.1%}")
+    print(f"   • Most Common Error: {error_pairs.iloc[0]['Real_Label']} → {error_pairs.iloc[0]['Predicted_Label']} ({error_pairs.iloc[0]['Count']} cases)")
+    
+    # Confidence insights
+    print(f"\n🎯 CONFIDENCE INSIGHTS:")
+    print(f"   • Average confidence (correct): {df_with_conf[df_with_conf['Is_Correct']]['Max_Probability'].mean():.3f}")
+    print(f"   • Average confidence (incorrect): {df_with_conf[~df_with_conf['Is_Correct']]['Max_Probability'].mean():.3f}")
+    print(f"   • Overconfident wrong predictions: {len(df_with_conf[(~df_with_conf['Is_Correct']) & (df_with_conf['Max_Probability'] > 0.8)])}")
+    
+    # Class-specific insights
+    print(f"\n📊 CLASS-SPECIFIC INSIGHTS:")
+    for idx, row in error_rates_df.head(3).iterrows():
+        print(f"   • Hardest class: {row['Class']} (Error rate: {row['Error_Rate']:.1%})")
+    
+    print(f"\n✅ ANALYSIS COMPLETED!")
+    print(f"   • Analyzed {len(df_with_conf):,} predictions across {len(class_names)} classes")
+    print(f"   • Generated {len(recommendations)} specific recommendations")
+    print(f"   • Created comprehensive visualizations for error patterns")
+
+create_summary_report()
+
+print("\n" + "="*70)
+print("🎉 ERROR ANALYSIS COMPLETE!")
+print("="*70)
+print("\nTo run this analysis with your data:")
+print("1. Replace the sample data section with your CSV loading code")
+print("2. Ensure your CSV has the required columns:")
+print("   - INC_Number (or similar ID)")
+print("   - Real_Label")
+print("   - Predicted_Label") 
+print("   - Prob_[class_name] for each class")
+print("3. Update class_names list with your actual class names")
+print("4. Run each section sequentially for comprehensive analysis")
+print("\nThe analysis provides:")
+print("• Confusion matrices and performance metrics")
+print("• Class-wise error analysis")
+print("• Confidence and calibration analysis")
+print("• ROC and Precision-Recall curves")
+print("• Probability distribution analysis")
+print("• Detailed misclassification investigation")
+print("• Actionable recommendations")
